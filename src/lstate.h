@@ -18,14 +18,13 @@
 struct lua_longjmp;  /* defined in ldo.c */
 
 
-/* table of globals */
+/* 获取全局哈希表 */
 #define gt(L)	(&L->l_gt)
 
-/* registry */
+/* 寄存器 */
 #define registry(L)	(&G(L)->l_registry)
 
-
-/* extra stack space to handle TM calls and some other extras */
+/* 扩展的栈空间来放置元操作调用以及一些其他的扩展 */
 #define EXTRA_STACK   5
 
 
@@ -33,12 +32,11 @@ struct lua_longjmp;  /* defined in ldo.c */
 
 #define BASIC_STACK_SIZE        (2*LUA_MINSTACK)
 
-
-
+/* 字符串表 */
 typedef struct stringtable {
-  GCObject **hash;
-  lu_int32 nuse;  /* number of elements */
-  int size;
+  GCObject **hash;    /* hash表 */
+  lu_int32 nuse;      /* 正在使用的hash节点 */
+  int size;           /* hash表的总大小 */
 } stringtable;
 
 
@@ -62,9 +60,7 @@ typedef struct CallInfo {
 #define isLua(ci)	(ttisfunction((ci)->func) && f_isLua(ci))
 
 
-/*
-** `global state', shared by all threads of this state
-*/
+/* `全局状态`,所有的线程共享这个状态 */
 typedef struct global_State {
   stringtable strt;  /* hash table for strings */
   lua_Alloc frealloc;  /* function to reallocate memory */
@@ -102,6 +98,7 @@ struct lua_State {
   lu_byte status;
   StkId top;  /* first free slot in the stack */
   StkId base;  /* base of current function */
+  /* 全局状态 */
   global_State *l_G;
   CallInfo *ci;  /* call info for current function */
   const Instruction *savedpc;  /* `savedpc' of current function */
@@ -126,13 +123,12 @@ struct lua_State {
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
 };
 
-
+/* 从本地线程状态返回全局状态 */
 #define G(L)	(L->l_G)
 
-
-/*
-** Union of all collectable objects
-*/
+/* 
+ * 所有可回收内存对象的联合体 
+ */
 union GCObject {
   GCheader gch;
   union TString ts;
@@ -158,7 +154,7 @@ union GCObject {
 	check_exp((o) == NULL || (o)->gch.tt == LUA_TUPVAL, &((o)->uv))
 #define gco2th(o)	check_exp((o)->gch.tt == LUA_TTHREAD, &((o)->th))
 
-/* macro to convert any Lua object into a GCObject */
+/* 转换任何Lua对象到一个GCObject */
 #define obj2gco(v)	(cast(GCObject *, (v)))
 
 

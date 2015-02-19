@@ -45,7 +45,7 @@ const char lua_ident[] =
 #define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
 
 
-
+/* 转换栈索引idx为地址的栈地址对象 */
 static TValue *index2adr (lua_State *L, int idx) {
   if (idx > 0) {
     TValue *o = L->base + (idx - 1);
@@ -381,7 +381,7 @@ LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
   return (!iscfunction(o)) ? NULL : clvalue(o)->c.f;
 }
 
-
+/* 将栈索引idx指向的对象转换为用户数据 */
 LUA_API void *lua_touserdata (lua_State *L, int idx) {
   StkId o = index2adr(L, idx);
   switch (ttype(o)) {
@@ -826,8 +826,9 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
 
 
 /*
-** Execute a protected C call.
-*/
+ * 在保护模式下调用一个C函数
+ * 给f_Ccall传递的参数
+ */
 struct CCallS {  /* data to `f_Ccall' */
   lua_CFunction func;
   void *ud;
@@ -846,7 +847,7 @@ static void f_Ccall (lua_State *L, void *ud) {
   luaD_call(L, L->top - 2, 0);
 }
 
-
+/* 将函数func放置到栈顶,并进行调用 */
 LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
   struct CCallS c;
   int status;
@@ -858,14 +859,24 @@ LUA_API int lua_cpcall (lua_State *L, lua_CFunction func, void *ud) {
   return status;
 }
 
-
+/* 加载一段脚本内存
+ * L 线程结构
+ * reader IO读取函数
+ * data 要读取IO接口结构
+ * chunkname 数据名称
+ */
 LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
                       const char *chunkname) {
   ZIO z;
   int status;
   lua_lock(L);
+  
+  /* 如果代码没有名称则是问号 */
   if (!chunkname) chunkname = "?";
+  /* 关联IO结构 */
   luaZ_init(L, &z, reader, data);
+  
+  /* 分析并执行 */
   status = luaD_protectedparser(L, &z, chunkname);
   lua_unlock(L);
   return status;

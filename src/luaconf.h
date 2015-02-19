@@ -68,7 +68,7 @@
 */
 #define LUA_PATH        "LUA_PATH"
 #define LUA_CPATH       "LUA_CPATH"
-#define LUA_INIT	"LUA_INIT"
+#define LUA_INIT        "LUA_INIT"
 
 
 /*
@@ -705,13 +705,9 @@ union luai_Cast { double l_d; long l_l; };
 #define LUA_DL_DLL
 #endif
 
-
-/*
-@@ LUAI_EXTRASPACE allows you to add user-specific data in a lua_State
-@* (the data goes just *before* the lua_State pointer).
-** CHANGE (define) this if you really need that. This value must be
-** a multiple of the maximum alignment required for your machine.
-*/
+/* @@ LUAI_EXTRASPACE允许增加用户自定义的数据在lua_State中(数据在lua_State指针之前)
+ * 如果要改变这个值,需要是你的计算机体系内存粒度的整倍数,32位系统是4,64位系统时8
+ */
 #define LUAI_EXTRASPACE		0
 
 
@@ -720,13 +716,16 @@ union luai_Cast { double l_d; long l_l; };
 ** CHANGE them if you defined LUAI_EXTRASPACE and need to do something
 ** extra when a thread is created/deleted/resumed/yielded.
 */
+/* @@ luai_userstate允许增加用户自定义的行为在每条线程上。
+ * 如果定义了LUAI_EXTRASPACE并且要控制一些函数，当一条线程
+ * create/deleted/resumed/yielded
+ */
 #define luai_userstateopen(L)		((void)L)
 #define luai_userstateclose(L)		((void)L)
 #define luai_userstatethread(L,L1)	((void)L)
 #define luai_userstatefree(L)		((void)L)
 #define luai_userstateresume(L,n)	((void)L)
 #define luai_userstateyield(L,n)	((void)L)
-
 
 /*
 @@ LUA_INTFRMLEN is the length modifier for integer conversions

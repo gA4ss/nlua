@@ -681,9 +681,10 @@ void luaC_barrierback (lua_State *L, Table *t) {
   g->grayagain = o;
 }
 
-
+/* 设置对象到全局状态 */
 void luaC_link (lua_State *L, GCObject *o, lu_byte tt) {
   global_State *g = G(L);
+  /* 可回收对象的指针永远指向刚创建的 */
   o->gch.next = g->rootgc;
   g->rootgc = o;
   o->gch.marked = luaC_white(g);

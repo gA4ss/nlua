@@ -61,7 +61,7 @@ static void l_message (const char *pname, const char *msg) {
   fflush(stderr);
 }
 
-
+/* 打印错误状态 */
 static int report (lua_State *L, int status) {
   if (status && !lua_isnil(L, -1)) {
     const char *msg = lua_tostring(L, -1);
@@ -130,13 +130,13 @@ static int getargs (lua_State *L, char **argv, int n) {
   return narg;
 }
 
-
+/* 执行脚本 */
 static int dofile (lua_State *L, const char *name) {
   int status = luaL_loadfile(L, name) || docall(L, 0, 1);
   return report(L, status);
 }
 
-
+/* 执行一段字符串脚本 */
 static int dostring (lua_State *L, const char *s, const char *name) {
   int status = luaL_loadbuffer(L, s, strlen(s), name) || docall(L, 0, 1);
   return report(L, status);
@@ -319,8 +319,9 @@ static int runargs (lua_State *L, char **argv, int n) {
   return 0;
 }
 
-
+/* 处理初始化语言 */
 static int handle_luainit (lua_State *L) {
+  /* 获取环境变量 */
   const char *init = getenv(LUA_INIT);
   if (init == NULL) return 0;  /* status OK */
   else if (init[0] == '@')
@@ -329,14 +330,14 @@ static int handle_luainit (lua_State *L) {
     return dostring(L, init, "=" LUA_INIT);
 }
 
-
+/* 参数结构 */
 struct Smain {
   int argc;
   char **argv;
   int status;
 };
 
-
+/* 真正的入口函数 */
 static int pmain (lua_State *L) {
   struct Smain *s = (struct Smain *)lua_touserdata(L, 1);
   char **argv = s->argv;
@@ -344,23 +345,33 @@ static int pmain (lua_State *L) {
   int has_i = 0, has_v = 0, has_e = 0;
   globalL = L;
   if (argv[0] && argv[0][0]) progname = argv[0];
-  lua_gc(L, LUA_GCSTOP, 0);  /* stop collector during initialization */
-  luaL_openlibs(L);  /* open libraries */
-  lua_gc(L, LUA_GCRESTART, 0);
+  lua_gc(L, LUA_GCSTOP, 0);     /* 在初始化时停止内存回收 */
+  luaL_openlibs(L);             /* 打开共享库 */
+  lua_gc(L, LUA_GCRESTART, 0);  /* 重新开始内存回收 */
+  
+  /* 执行lua初始化的程序 */
   s->status = handle_luainit(L);
   if (s->status != 0) return 0;
+  
+  /* 分析命令行 */
   script = collectargs(argv, &has_i, &has_v, &has_e);
   if (script < 0) {  /* invalid args? */
     print_usage();
     s->status = 1;
     return 0;
   }
+  
+  /* 打印版本 */
   if (has_v) print_version();
   s->status = runargs(L, argv, (script > 0) ? script : s->argc);
   if (s->status != 0) return 0;
+  
+  /* 执行脚本 */
   if (script)
     s->status = handle_script(L, argv, script);
   if (s->status != 0) return 0;
+  
+  /* 进入终端 */
   if (has_i)
     dotty(L);
   else if (script == 0 && !has_e && !has_v) {
@@ -368,7 +379,7 @@ static int pmain (lua_State *L) {
       print_version();
       dotty(L);
     }
-    else dofile(L, NULL);  /* executes stdin as a file */
+    else dofile(L, NULL);  /* 执行stdin作为文件 */
   }
   return 0;
 }
@@ -377,6 +388,7 @@ static int pmain (lua_State *L) {
 int main (int argc, char **argv) {
   int status;
   struct Smain s;
+  /* 创建一个lua状态 */
   lua_State *L = lua_open();  /* create state */
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");

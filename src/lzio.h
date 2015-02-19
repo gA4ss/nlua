@@ -53,12 +53,13 @@ LUAI_FUNC int luaZ_lookahead (ZIO *z);
 
 /* --------- Private Part ------------------ */
 
+/* IO结构 */
 struct Zio {
-  size_t n;			/* bytes still unread */
-  const char *p;		/* current position in buffer */
-  lua_Reader reader;
-  void* data;			/* additional data */
-  lua_State *L;			/* Lua state (for reader) */
+  size_t n;             /* 缓存中还没有读取的内容的长度 */
+  const char *p;		/* 在缓存中的正确位置 */
+  lua_Reader reader;    /* IO读取函数 */
+  void* data;			/* 数据结构 */
+  lua_State *L;			/* 线程状态结构 */
 };
 
 

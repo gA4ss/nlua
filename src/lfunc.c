@@ -40,7 +40,7 @@ Closure *luaF_newLclosure (lua_State *L, int nelems, Table *e) {
   return c;
 }
 
-
+/* 新的upvalue */
 UpVal *luaF_newupval (lua_State *L) {
   UpVal *uv = luaM_new(L, UpVal);
   luaC_link(L, obj2gco(uv), LUA_TUPVAL);

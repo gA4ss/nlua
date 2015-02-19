@@ -548,7 +548,10 @@ static int errfile (lua_State *L, const char *what, int fnameindex) {
   return LUA_ERRFILE;
 }
 
-
+/* 加载lua程序代码 
+ * L 线程状态指针
+ * filename 脚本文件路径
+ */
 LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   LoadF lf;
   int status, readstatus;
@@ -564,6 +567,8 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     lf.f = fopen(filename, "r");
     if (lf.f == NULL) return errfile(L, "open", fnameindex);
   }
+    
+  /* 读取第一字节 */
   c = getc(lf.f);
   if (c == '#') {  /* Unix exec. file? */
     lf.extraline = 1;
@@ -571,13 +576,17 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     if (c == '\n') c = getc(lf.f);
   }
   if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
-    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
-    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-    /* skip eventual `#!...' */
-   while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
-    lf.extraline = 0;
+      lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+      if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+      /* skip eventual `#!...' */
+      while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
+      lf.extraline = 0;
   }
+  
+  /* 回退一个字节 */
   ungetc(c, lf.f);
+  
+  /* 加载程序文件内容 */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
   readstatus = ferror(lf.f);
   if (filename) fclose(lf.f);  /* close file (even in case of errors) */
@@ -589,7 +598,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   return status;
 }
 
-
+/* 加载缓存流结构 */
 typedef struct LoadS {
   const char *s;
   size_t size;
@@ -605,7 +614,7 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
   return ls->s;
 }
 
-
+/* 加载一段lua语言缓存病执行 */
 LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
                                 const char *name) {
   LoadS ls;
@@ -614,7 +623,7 @@ LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
   return lua_load(L, getS, &ls, name);
 }
 
-
+/* 加载一段lua语言字符串并执行 */
 LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s) {
   return luaL_loadbuffer(L, s, strlen(s), s);
 }
@@ -622,7 +631,6 @@ LUALIB_API int (luaL_loadstring) (lua_State *L, const char *s) {
 
 
 /* }====================================================== */
-
 
 static void *l_alloc (void *ud, void *ptr, size_t osize, size_t nsize) {
   (void)ud;

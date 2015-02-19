@@ -477,35 +477,40 @@ int luaD_pcall (lua_State *L, Pfunc func, void *u,
   return status;
 }
 
-
-
 /*
-** Execute a protected parser.
-*/
-struct SParser {  /* data to `f_parser' */
-  ZIO *z;
-  Mbuffer buff;  /* buffer to be used by the scanner */
+ * 语法分析结构
+ */
+struct SParser {    /* `f_parser'函数的参数结构 */
+  ZIO *z;           /* IO结构 */
+  Mbuffer buff;     /* scanner需要的缓存 */
   const char *name;
 };
 
+/* 语法分析入口 */
 static void f_parser (lua_State *L, void *ud) {
   int i;
   Proto *tf;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
+  
+  /* 检查第一个字节 */
   int c = luaZ_lookahead(p->z);
   luaC_checkGC(L);
+  
+  /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型 */
   tf = ((c == LUA_SIGNATURE[0]) ? luaU_undump : luaY_parser)(L, p->z,
                                                              &p->buff, p->name);
   cl = luaF_newLclosure(L, tf->nups, hvalue(gt(L)));
   cl->l.p = tf;
-  for (i = 0; i < tf->nups; i++)  /* initialize eventual upvalues */
+  for (i = 0; i < tf->nups; i++)  /* 初始化最后的upvalue */
     cl->l.upvals[i] = luaF_newupval(L);
+  
+  /* 设置这个闭包指针到栈顶 */
   setclvalue(L, L->top, cl);
   incr_top(L);
 }
 
-
+/* 分析并执行程序 */
 int luaD_protectedparser (lua_State *L, ZIO *z, const char *name) {
   struct SParser p;
   int status;

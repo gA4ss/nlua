@@ -61,7 +61,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 
 #define lua_assert(c)		((void)0)
 #define check_exp(c,e)		(e)
-#define api_check		luai_apicheck
+#define api_check           luai_apicheck
 
 #endif
 

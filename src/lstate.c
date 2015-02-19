@@ -23,22 +23,22 @@
 #include "ltable.h"
 #include "ltm.h"
 
-
+/* 计算整个LG的长度 */
 #define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
+/* 返回LG整体的指针 */
 #define fromstate(l)	(cast(lu_byte *, (l)) - LUAI_EXTRASPACE)
+/* 返回lua_State指针 */
 #define tostate(l)   (cast(lua_State *, cast(lu_byte *, l) + LUAI_EXTRASPACE))
 
-
-/*
-** Main thread combines a thread state and the global state
-*/
+/* 
+ * 主线程包括一个线程状态与一个全局状态 
+ */
 typedef struct LG {
-  lua_State l;
-  global_State g;
+  lua_State l;        /* 线程状态 */
+  global_State g;     /* 全局状态 */
 } LG;
   
-
-
+/* 初始化栈状态 */
 static void stack_init (lua_State *L1, lua_State *L) {
   /* initialize CallInfo array */
   L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
@@ -57,7 +57,7 @@ static void stack_init (lua_State *L1, lua_State *L) {
   L1->ci->top = L1->top + LUA_MINSTACK;
 }
 
-
+/* 释放栈空间 */
 static void freestack (lua_State *L, lua_State *L1) {
   luaM_freearray(L, L1->base_ci, L1->size_ci, CallInfo);
   luaM_freearray(L, L1->stack, L1->stacksize, TValue);
@@ -68,11 +68,16 @@ static void freestack (lua_State *L, lua_State *L1) {
 ** open parts that may cause memory-allocation errors
 */
 static void f_luaopen (lua_State *L, void *ud) {
+  /* 获取全局状态指针 */
   global_State *g = G(L);
   UNUSED(ud);
+  /* 栈初始化 */
   stack_init(L, L);  /* init stack */
+  /* 初始化全局哈希表 */
   sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */
+  /* 初始化寄存器 */
   sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */
+  /* 初始化字符串表 */
   luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
   luaT_init(L);
   luaX_init(L);
@@ -80,7 +85,7 @@ static void f_luaopen (lua_State *L, void *ud) {
   g->GCthreshold = 4*g->totalbytes;
 }
 
-
+/* 初始化线程状态 */
 static void preinit_state (lua_State *L, global_State *g) {
   G(L) = g;
   L->stack = NULL;
@@ -101,22 +106,29 @@ static void preinit_state (lua_State *L, global_State *g) {
   setnilvalue(gt(L));
 }
 
-
+/* 关闭本地线程 */
 static void close_state (lua_State *L) {
   global_State *g = G(L);
+  /* 关闭这条线程上所有的upvalues */
   luaF_close(L, L->stack);  /* close all upvalues for this thread */
+  /* 回收所有的对象内存 */
   luaC_freeall(L);  /* collect all objects */
   lua_assert(g->rootgc == obj2gco(L));
   lua_assert(g->strt.nuse == 0);
+  /* 释放全局字符串哈希表 */
   luaM_freearray(L, G(L)->strt.hash, G(L)->strt.size, TString *);
+  /* 释放临时缓存 */
   luaZ_freebuffer(L, &g->buff);
+  /* 释放堆栈 */
   freestack(L, L);
   lua_assert(g->totalbytes == sizeof(LG));
+  /* 释放整体内存 */
   (*g->frealloc)(g->ud, fromstate(L), state_size(LG), 0);
 }
 
-
+/* 创建新的线程 */
 lua_State *luaE_newthread (lua_State *L) {
+  /* 创建一个新的线程状态 */
   lua_State *L1 = tostate(luaM_malloc(L, state_size(lua_State)));
   luaC_link(L, obj2gco(L1), LUA_TTHREAD);
   preinit_state(L1, G(L));
@@ -130,7 +142,7 @@ lua_State *luaE_newthread (lua_State *L) {
   return L1;
 }
 
-
+/* 释放线程 */
 void luaE_freethread (lua_State *L, lua_State *L1) {
   luaF_close(L1, L1->stack);  /* close all upvalues for this thread */
   lua_assert(L1->openupval == NULL);
@@ -139,13 +151,17 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaM_freemem(L, fromstate(L1), state_size(lua_State));
 }
 
-
+/* 分配新的状态 */
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
   lua_State *L;
   global_State *g;
+  
+  /* 分配一个主线程结构状态 */
   void *l = (*f)(ud, NULL, 0, state_size(LG));
   if (l == NULL) return NULL;
+  
+  /* 返回lua_State */
   L = tostate(l);
   g = &((LG *)L)->g;
   L->next = NULL;
@@ -164,6 +180,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->strt.nuse = 0;
   g->strt.hash = NULL;
   setnilvalue(registry(L));
+  /* 初始化临时缓存 */
   luaZ_initbuffer(L, &g->buff);
   g->panic = NULL;
   g->gcstate = GCSpause;
@@ -178,7 +195,9 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcpause = LUAI_GCPAUSE;
   g->gcstepmul = LUAI_GCMUL;
   g->gcdept = 0;
+  /* 初始化元操作 */
   for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
+  /* 打开这条线程状态 */
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
     close_state(L);
@@ -189,13 +208,13 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   return L;
 }
 
-
+/* 调用 GC 元方法为所有的用户数据 */
 static void callallgcTM (lua_State *L, void *ud) {
   UNUSED(ud);
   luaC_callGCTM(L);  /* call GC metamethods for all udata */
 }
 
-
+/* 关闭一个lua线程 */
 LUA_API void lua_close (lua_State *L) {
   L = G(L)->mainthread;  /* only the main thread can be closed */
   lua_lock(L);

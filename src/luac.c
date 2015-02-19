@@ -4,6 +4,8 @@
 ** See Copyright Notice in lua.h
 */
 
+#ifdef luac_compile
+
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -198,3 +200,5 @@ int main(int argc, char* argv[])
  lua_close(L);
  return EXIT_SUCCESS;
 }
+
+#endif

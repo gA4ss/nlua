@@ -222,31 +222,28 @@ typedef union Udata {
   } uv;
 } Udata;
 
-
-
-
 /*
-** Function Prototypes
-*/
+ * 函数原型
+ */
 typedef struct Proto {
   CommonHeader;
-  TValue *k;  /* constants used by the function */
+  TValue *k;                    /* 函数使用的常量队列 */
   Instruction *code;
-  struct Proto **p;  /* functions defined inside the function */
-  int *lineinfo;  /* map from opcodes to source lines */
-  struct LocVar *locvars;  /* information about local variables */
-  TString **upvalues;  /* upvalue names */
+  struct Proto **p;             /* 在当前函数中定义的函数队列 */
+  int *lineinfo;                /* map from opcodes to source lines */
+  struct LocVar *locvars;       /* information about local variables */
+  TString **upvalues;           /* upvalue names */
   TString  *source;
   int sizeupvalues;
-  int sizek;  /* size of `k' */
+  int sizek;                    /* 常量的个数 */
   int sizecode;
   int sizelineinfo;
-  int sizep;  /* size of `p' */
+  int sizep;                    /* size of `p' */
   int sizelocvars;
   int linedefined;
   int lastlinedefined;
   GCObject *gclist;
-  lu_byte nups;  /* number of upvalues */
+  lu_byte nups;                 /* number of upvalues */
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;
@@ -285,34 +282,37 @@ typedef struct UpVal {
 
 
 /*
-** Closures
-*/
+ * 闭包
+ */
 
+/* 闭包的头结构 */
 #define ClosureHeader \
 	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
 	struct Table *env
 
+/* c闭包 */
 typedef struct CClosure {
   ClosureHeader;
   lua_CFunction f;
   TValue upvalue[1];
 } CClosure;
 
-
+/* lua闭包 */
 typedef struct LClosure {
   ClosureHeader;
   struct Proto *p;
   UpVal *upvals[1];
 } LClosure;
 
-
+/* 闭包函数 */
 typedef union Closure {
-  CClosure c;
-  LClosure l;
+  CClosure c;           /* c闭包结构 */
+  LClosure l;           /* lua闭包结构 */
 } Closure;
 
-
+/* 判断c函数 */
 #define iscfunction(o)	(ttype(o) == LUA_TFUNCTION && clvalue(o)->c.isC)
+/* 判断lua函数 */
 #define isLfunction(o)	(ttype(o) == LUA_TFUNCTION && !clvalue(o)->c.isC)
 
 
@@ -352,6 +352,12 @@ typedef struct Table {
 /*
 ** `module' operation for hashing (size is always a power of 2)
 */
+/* hash算法的`模`操作
+ * s 要hash的字符串
+ * size s的长度,size必须是2的次冥
+ * 
+ * 其实这里就做了一个s的值与长度减1的并操作
+ */
 #define lmod(s,size) \
 	(check_exp((size&(size-1))==0, (cast(int, (s) & ((size)-1)))))
 
