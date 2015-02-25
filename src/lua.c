@@ -4,6 +4,8 @@
 ** See Copyright Notice in lua.h
 */
 
+//#define nlua_vm
+#ifdef nlua_vm
 
 #include <signal.h>
 #include <stdio.h>
@@ -401,4 +403,6 @@ int main (int argc, char **argv) {
   lua_close(L);
   return (status || s.status) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
+
+#endif
 

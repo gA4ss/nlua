@@ -35,7 +35,7 @@ typedef struct Mbuffer {
 
 #define luaZ_resetbuffer(buff) ((buff)->n = 0)
 
-
+/* 重新分配buff的内存长度为size */
 #define luaZ_resizebuffer(L, buff, size) \
 	(luaM_reallocvector(L, (buff)->buffer, (buff)->buffsize, size, char), \
 	(buff)->buffsize = size)
@@ -44,11 +44,9 @@ typedef struct Mbuffer {
 
 
 LUAI_FUNC char *luaZ_openspace (lua_State *L, Mbuffer *buff, size_t n);
-LUAI_FUNC void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader,
-                                        void *data);
+LUAI_FUNC void luaZ_init (lua_State *L, ZIO *z, lua_Reader reader, void *data);
 LUAI_FUNC size_t luaZ_read (ZIO* z, void* b, size_t n);	/* read next n bytes */
 LUAI_FUNC int luaZ_lookahead (ZIO *z);
-
 
 
 /* --------- Private Part ------------------ */

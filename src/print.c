@@ -7,7 +7,7 @@
 #include <ctype.h>
 #include <stdio.h>
 
-#define luac_c
+#define nluac_c
 #define LUA_CORE
 
 #include "ldebug.h"
@@ -212,16 +212,14 @@ static void PrintUpvalues(const Proto* f)
  }
 }
 
-void PrintFunction(const Proto* f, int full)
-{
- int i,n=f->sizep;
- PrintHeader(f);
- PrintCode(f);
- if (full)
- {
-  PrintConstants(f);
-  PrintLocals(f);
-  PrintUpvalues(f);
- }
- for (i=0; i<n; i++) PrintFunction(f->p[i],full);
+void PrintFunction(const Proto* f, int full) {
+  int i,n=f->sizep;
+  PrintHeader(f);
+  PrintCode(f);
+  if (full) {
+    PrintConstants(f);
+    PrintLocals(f);
+    PrintUpvalues(f);
+  }
+  for (i=0; i<n; i++) PrintFunction(f->p[i],full);
 }

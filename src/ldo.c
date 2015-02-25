@@ -30,6 +30,8 @@
 #include "lvm.h"
 #include "lzio.h"
 
+/* nlua头文件 */
+#include "nundump.h"
 
 
 
@@ -497,15 +499,29 @@ static void f_parser (lua_State *L, void *ud) {
   int c = luaZ_lookahead(p->z);
   luaC_checkGC(L);
   
-  /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型 */
+  /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型 
+   * 这里主要是判读是脚本文件还是预先编译文件
+   */
+  if (c == LUA_SIGNATURE[0]) {
+    tf = luaU_undump(L, p->z, &p->buff, p->name);
+  } else if (c == NLUA_SIGNATURE[0]) {
+    tf = nluaU_undump(L, p->z, &p->buff, p->name);
+  } else {
+    /* 纯脚本 */
+    tf = luaY_parser(L, p->z, &p->buff, p->name);
+  }
+  
+  /*
   tf = ((c == LUA_SIGNATURE[0]) ? luaU_undump : luaY_parser)(L, p->z,
                                                              &p->buff, p->name);
+   */
+  
   cl = luaF_newLclosure(L, tf->nups, hvalue(gt(L)));
   cl->l.p = tf;
   for (i = 0; i < tf->nups; i++)  /* 初始化最后的upvalue */
     cl->l.upvals[i] = luaF_newupval(L);
   
-  /* 设置这个闭包指针到栈顶 */
+  /* 设置这个闭包指针到栈顶，为执行做好准备 */
   setclvalue(L, L->top, cl);
   incr_top(L);
 }

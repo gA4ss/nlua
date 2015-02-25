@@ -17,6 +17,7 @@ LIBS= -lm $(MYLIBS)
 MYCFLAGS=
 MYLDFLAGS=
 MYLIBS=
+GDEFINE=
 
 # == END OF USER SETTINGS. NO NEED TO CHANGE ANYTHING BELOW THIS LINE =========
 
@@ -29,14 +30,17 @@ CORE_O=	lapi.o lcode.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o lmem.o \
 LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 	lstrlib.o loadlib.o linit.o
 
+# nlua
+CORE_O+=  ndump.o nundump.o crc.o xor.o
+
 LUA_T=	lua
 LUA_O=	lua.o
 
-LUAC_T=	luac
-LUAC_O=	luac.o print.o
+NLUAC_T=	nluac
+NLUAC_O=	nluac.o print.o
 
-ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(LUAC_O)
-ALL_T= $(LUA_A) $(LUA_T) $(LUAC_T)
+ALL_O= $(CORE_O) $(LIB_O) $(LUA_O) $(NLUAC_O)
+ALL_T= $(LUA_A) $(LUA_T) $(NLUAC_T)
 ALL_A= $(LUA_A)
 
 default: $(PLAT)
@@ -54,8 +58,8 @@ $(LUA_A): $(CORE_O) $(LIB_O)
 $(LUA_T): $(LUA_O) $(LUA_A)
 	$(CC) -o $@ $(MYLDFLAGS) $(LUA_O) $(LUA_A) $(LIBS)
 
-$(LUAC_T): $(LUAC_O) $(LUA_A)
-	$(CC) -o $@ $(MYLDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
+$(NLUAC_T): $(NLUAC_O) $(LUA_A)
+	$(CC) -o $@ $(MYLDFLAGS) $(NLUAC_O) $(LUA_A) $(LIBS)
 
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
@@ -81,39 +85,39 @@ none:
 	@echo "   $(PLATS)"
 
 aix:
-	$(MAKE) all CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
+	$(MAKE) all CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN -Dnlua_vm -Dnlua_compile" MYLIBS="-ldl" MYLDFLAGS="-brtl -bexpall"
 
 ansi:
-	$(MAKE) all MYCFLAGS=-DLUA_ANSI
+	$(MAKE) all MYCFLAGS="-DLUA_ANSI -Dnlua_vm -Dnlua_compile"
 
 bsd:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-Wl,-E"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN -Dnlua_vm -Dnlua_compile" MYLIBS="-Wl,-E"
 
 freebsd:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX" MYLIBS="-Wl,-E -lreadline"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-Wl,-E -lreadline"
 
 generic:
-	$(MAKE) all MYCFLAGS=
+	$(MAKE) all MYCFLAGS="-Dnlua_vm -Dnlua_compile"
 
 linux:
-	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
 
 macosx:
-	$(MAKE) all MYCFLAGS=-DLUA_USE_LINUX MYLIBS="-lreadline"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-lreadline"
 # use this on Mac OS X 10.3-
 #	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
 
 mingw:
 	$(MAKE) "LUA_A=lua51.dll" "LUA_T=lua.exe" \
 	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
-	"MYCFLAGS=-DLUA_BUILD_AS_DLL" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
-	$(MAKE) "LUAC_T=luac.exe" luac.exe
+	"MYCFLAGS=-DLUA_BUILD_AS_DLL -Dnlua_vm -Dnlua_compile" "MYLIBS=" "MYLDFLAGS=-s" lua.exe
+	$(MAKE) "NLUAC_T=nluac.exe" nluac.exe
 
 posix:
-	$(MAKE) all MYCFLAGS=-DLUA_USE_POSIX
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -Dnlua_vm -Dnlua_compile"
 
 solaris:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" MYLIBS="-ldl"
+	$(MAKE) all MYCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN -Dnlua_vm -Dnlua_compile" MYLIBS="-ldl"
 
 # list targets that do not create files (but not all makes understand .PHONY)
 .PHONY: all $(PLATS) default o a clean depend echo none
@@ -178,5 +182,13 @@ lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
   lzio.h
 print.o: print.c ldebug.h lstate.h lua.h luaconf.h lobject.h llimits.h \
   ltm.h lzio.h lmem.h lopcodes.h lundump.h
+
+# nlua
+nundump.o: nundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
+  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h
+ndump.o: ndump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
+  lzio.h lmem.h nundump.h
+crc.o: crc.c crc.h
+xor.o: xor.c xor.h
 
 # (end of Makefile)

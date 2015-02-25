@@ -15,16 +15,37 @@
 
 #include "luaconf.h"
 
+/*
+ * Naga Lua的一些常量定义
+ */
+#include "nlua.h"
 
-#define LUA_VERSION	"Lua 5.1"
-#define LUA_RELEASE	"Lua 5.1.5"
-#define LUA_VERSION_NUM	501
-#define LUA_COPYRIGHT	"Copyright (C) 1994-2012 Lua.org, PUC-Rio"
-#define LUA_AUTHORS 	"R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
+
+#ifndef use_nlua_info       /* 是否使用naga lua的描述信息 */
+
+#define LUA_VERSION         "Lua 5.1"
+#define LUA_RELEASE         "Lua 5.1.5"
+#define LUA_VERSION_NUM     501
+#define LUA_COPYRIGHT       "Copyright (C) 1994-2012 Lua.org, PUC-Rio"
+#define LUA_AUTHORS         "R. Ierusalimschy, L. H. de Figueiredo & W. Celes"
 
 
 /* mark for precompiled code (`<esc>Lua') */
-#define	LUA_SIGNATURE	"\033Lua"
+#define	LUA_SIGNATURE       "\033Lua"
+
+#else
+
+#define LUA_VERSION         NLUA_VERSION
+#define LUA_RELEASE         NLUA_RELEASE
+#define LUA_VERSION_NUM     NLUA_VERSION_NUM
+#define LUA_COPYRIGHT       NLUA_COPYRIGHT
+#define LUA_AUTHORS         NLUA_AUTHORS
+
+
+/* mark for precompiled code (`<esc>Lua') */
+#define	LUA_SIGNATURE       NLUA_SIGNATURE
+
+#endif
 
 /* option for multiple returns in `lua_pcall' and `lua_call' */
 #define LUA_MULTRET	(-1)

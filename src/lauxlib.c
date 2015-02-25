@@ -575,12 +575,17 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
     while ((c = getc(lf.f)) != EOF && c != '\n') ;  /* skip first line */
     if (c == '\n') c = getc(lf.f);
   }
-  if (c == LUA_SIGNATURE[0] && filename) {  /* binary file? */
-      lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
-      if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
-      /* skip eventual `#!...' */
-      while ((c = getc(lf.f)) != EOF && c != LUA_SIGNATURE[0]) ;
-      lf.extraline = 0;
+  
+  /* 如果是预编译二进制文件则以2进制文件重新打开 */
+  if (((c == LUA_SIGNATURE[0]) || (c == NLUA_SIGNATURE[0]))
+      && filename) {  /* binary file? */
+    lf.f = freopen(filename, "rb", lf.f);  /* reopen in binary mode */
+    if (lf.f == NULL) return errfile(L, "reopen", fnameindex);
+    /* skip eventual `#!...' */
+    while ((c = getc(lf.f)) != EOF &&
+           c != LUA_SIGNATURE[0] &&
+           c != NLUA_SIGNATURE[0]) ;
+    lf.extraline = 0;
   }
   
   /* 回退一个字节 */
@@ -614,7 +619,7 @@ static const char *getS (lua_State *L, void *ud, size_t *size) {
   return ls->s;
 }
 
-/* 加载一段lua语言缓存病执行 */
+/* 加载一段lua语言缓存并执行 */
 LUALIB_API int luaL_loadbuffer (lua_State *L, const char *buff, size_t size,
                                 const char *name) {
   LoadS ls;
