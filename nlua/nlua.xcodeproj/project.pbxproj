@@ -76,7 +76,7 @@
 		BC4CBD5A1A944B5600C50272 /* ldebug.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ldebug.h; path = ../../src/ldebug.h; sourceTree = "<group>"; };
 		BC4CBD5B1A944B5600C50272 /* ldo.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = ldo.c; path = ../../src/ldo.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD5C1A944B5600C50272 /* ldo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ldo.h; path = ../../src/ldo.h; sourceTree = "<group>"; };
-		BC4CBD5D1A944B5600C50272 /* ldump.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = ldump.c; path = ../../src/ldump.c; sourceTree = "<group>"; };
+		BC4CBD5D1A944B5600C50272 /* ldump.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = ldump.c; path = ../../src/ldump.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD5E1A944B5600C50272 /* lfunc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lfunc.c; path = ../../src/lfunc.c; sourceTree = "<group>"; };
 		BC4CBD5F1A944B5600C50272 /* lfunc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lfunc.h; path = ../../src/lfunc.h; sourceTree = "<group>"; };
 		BC4CBD601A944B5600C50272 /* lgc.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = lgc.c; path = ../../src/lgc.c; sourceTree = "<group>"; tabWidth = 2; };
@@ -143,6 +143,28 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		BC37730F1AA0CCCF0044727A /* main */ = {
+			isa = PBXGroup;
+			children = (
+				BC4CBD7C1A944B5600C50272 /* lua.c */,
+				BCADED681A9AD53500356922 /* nluac.c */,
+			);
+			name = main;
+			sourceTree = "<group>";
+		};
+		BC3773101AA0DC5E0044727A /* dump */ = {
+			isa = PBXGroup;
+			children = (
+				BCADED021A9A1DB400356922 /* ndump.c */,
+				BCADED031A9A1DB400356922 /* nundump.c */,
+				BCADED041A9A1DB400356922 /* nundump.h */,
+				BC4CBD811A944B5600C50272 /* lundump.c */,
+				BC4CBD821A944B5600C50272 /* lundump.h */,
+				BC4CBD5D1A944B5600C50272 /* ldump.c */,
+			);
+			name = dump;
+			sourceTree = "<group>";
+		};
 		BC4CBCA01A944AAD00C50272 = {
 			isa = PBXGroup;
 			children = (
@@ -162,6 +184,8 @@
 		BC4CBCAB1A944AAD00C50272 /* nlua */ = {
 			isa = PBXGroup;
 			children = (
+				BC3773101AA0DC5E0044727A /* dump */,
+				BC37730F1AA0CCCF0044727A /* main */,
 				BCADED6A1A9ADADF00356922 /* crc.c */,
 				BCADED6B1A9ADADF00356922 /* crc.h */,
 				BC4CBD511A944B5600C50272 /* lapi.c */,
@@ -176,7 +200,6 @@
 				BC4CBD5A1A944B5600C50272 /* ldebug.h */,
 				BC4CBD5B1A944B5600C50272 /* ldo.c */,
 				BC4CBD5C1A944B5600C50272 /* ldo.h */,
-				BC4CBD5D1A944B5600C50272 /* ldump.c */,
 				BC4CBD5E1A944B5600C50272 /* lfunc.c */,
 				BC4CBD5F1A944B5600C50272 /* lfunc.h */,
 				BC4CBD601A944B5600C50272 /* lgc.c */,
@@ -207,26 +230,19 @@
 				BC4CBD791A944B5600C50272 /* ltablib.c */,
 				BC4CBD7A1A944B5600C50272 /* ltm.c */,
 				BC4CBD7B1A944B5600C50272 /* ltm.h */,
-				BC4CBD7C1A944B5600C50272 /* lua.c */,
 				BC4CBD7D1A944B5600C50272 /* lua.h */,
 				BC4CBD7F1A944B5600C50272 /* luaconf.h */,
 				BC4CBD801A944B5600C50272 /* lualib.h */,
-				BC4CBD811A944B5600C50272 /* lundump.c */,
-				BC4CBD821A944B5600C50272 /* lundump.h */,
 				BC4CBD831A944B5600C50272 /* lvm.c */,
 				BC4CBD841A944B5600C50272 /* lvm.h */,
 				BCB825BC1A9F935700CEF718 /* lvmorig */,
 				BC4CBD851A944B5600C50272 /* lzio.c */,
 				BC4CBD861A944B5600C50272 /* lzio.h */,
 				BC4CBD871A944B5600C50272 /* Makefile */,
-				BCADED021A9A1DB400356922 /* ndump.c */,
 				BC78D55D1A9F28600024E3A2 /* nlua.c */,
 				BCADED071A9AC87F00356922 /* nlua.h */,
-				BCADED681A9AD53500356922 /* nluac.c */,
 				BC49E3C51A9E2CA400A2CEAC /* nopcodes.c */,
 				BC49E3C41A9E2C9000A2CEAC /* nopcodes.h */,
-				BCADED031A9A1DB400356922 /* nundump.c */,
-				BCADED041A9A1DB400356922 /* nundump.h */,
 				BC4CBD881A944B5600C50272 /* print.c */,
 				BCADED6C1A9ADADF00356922 /* xor.c */,
 				BCADED6D1A9ADADF00356922 /* xor.h */,

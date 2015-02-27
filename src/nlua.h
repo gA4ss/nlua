@@ -43,6 +43,6 @@ LUAI_FUNC int nluaV_enidata (lua_State* L, Instruction* pins);
 LUAI_FUNC int nluaV_deidata (lua_State* L, Instruction* pins);
 LUAI_FUNC int nluaV_enbuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
 LUAI_FUNC int nluaV_debuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
-LUAI_FUNC lu_int32 nluaV_fkmake (lua_State* L, const char* path);/* 出错返回-1 */
+LUAI_FUNC lu_int32 nluaV_fkmake (lua_State* L, const char* path);/* 出错返回0 */
 
 #endif

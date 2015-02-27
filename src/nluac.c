@@ -92,45 +92,11 @@ static void usage(const char* message) {
 
 #define	IS(s)	(strcmp(argv[i],s)==0)
 
-/* 产生文件key */
-static unsigned int makefilekey(char* filename) {
-  FILE* fp=NULL;
-  unsigned int fkey=0;
-  long fsize=0;
-  size_t r=0;
-  void* fbuf=NULL;
-  
-  fp = fopen(filename, "rb");
-  if (fp == NULL) {
-    cannot("open file");
-  }
-  
-  /* 获取文件长度 */
-  fseek(fp, 0, SEEK_END);
-  fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  
-  /* 读取文件 */
-  fbuf=malloc(fsize);
-  if (fbuf == NULL) {
-    cannot("malloc");
-  }
-  r = fread(fbuf, 1, fsize, fp);
-  if (r != fsize) {
-    cannot("malloc");
-  }
-  
-  fkey=(unsigned int)crc32((unsigned char*)fbuf, (unsigned int)fsize);
-  free(fbuf);
-  fclose(fp);
-  
-  return fkey;
-}
-
 /* 分析命令行 */
-static int doargs(int argc, char* argv[]) {
+static int doargs(lua_State* L, int argc, char* argv[]) {
   int i;
   int version=0;
+  nluaV_MakeFileKey makefilekey=G(L)->fkmake;
   memset(fkeyp, 0, 128);    /* 0值为了做判断 */
   if (argv[0]!=NULL && *argv[0]!=0) progname=argv[0];
   for (i=1; i<argc; i++) {
@@ -181,7 +147,10 @@ static int doargs(int argc, char* argv[]) {
         /* 纪录下,为了-x参数在-k参数之后的情况做准备 */
         strcpy(fkeyp, kstr);
       } else {
-        fkey=makefilekey(kstr);
+        fkey=makefilekey(L,kstr);
+        if (fkey==0) {
+          cannot("make file key");
+        }
         /* fks在-x中进行赋值 */
       }
     } else if (IS("-x")) {	/* 加密字节文件使用文件的hash值 */
@@ -189,7 +158,10 @@ static int doargs(int argc, char* argv[]) {
       if (fk==NULL || *fk==0) usage(LUA_QL("-x") " needs argument");
       /* 如果 -k 选项在前面就会造成这样的结果 */
       if (fkeyp[0] != 0) {
-        fkey=makefilekey(fkeyp);
+        fkey=makefilekey(L,fkeyp);
+        if (fkey==0) {
+          cannot("make file key");
+        }
       }
       strcpy(fkeyp, fk);
       fks=(unsigned int)strlen(fkeyp);
@@ -289,55 +261,64 @@ static int pmain(lua_State* L) {
   
   /* 输出为字节代码文件 */
   if (dumping) {
-    unsigned char* nopt;
-    long nopts;
     FILE* D= (output==NULL) ? stdout : fopen(output,"wb");
     if (D==NULL) cannot("open");
     lua_lock(L);
-    if (efk)
-      nopts=sizeof(NagaLuaOpt)+strlen(fkeyp);
-    else
-      nopts=sizeof(NagaLuaOpt)+4;
     
-    nopt=(unsigned char*)malloc(nopts);
-    if (nopt==NULL) cannot("malloc");
-    memset(nopt, 0, nopts);
-    /* 填充选项 */
-    if (rop) {
-      nlo_set_rop(nopt);
-    }
     
-    if (eid) {
-      nlo_set_eid(nopt);
-    }
-    
-    if (ei) {
-      nlo_set_ei(nopt);
-    }
-    
-    if (ef || ed) {
+    if (usenlua==0) {       /* 使用正常的lua */
+      luaU_dump(L,f,writer,D,stripping);
+    } else {                /* 使用nlua格式 */
+      unsigned char* nopt;
+      long nopts;
       
-      if (ef) {
-        nlo_set_ef(nopt);
+      nopts=sizeof(NagaLuaOpt);
+      if ((ef) || (ed)) {
+        if (efk)
+          nopts=sizeof(NagaLuaOpt)+strlen(fkeyp);
+        else
+          nopts=sizeof(NagaLuaOpt)+4;
+      }
+      nopt=(unsigned char*)malloc(nopts);
+      if (nopt==NULL) cannot("malloc");
+      memset(nopt, 0, nopts);
+      /* 填充选项 */
+      if (rop) {
+        nlo_set_rop(nopt);
       }
       
-      if (ed) {
-        nlo_set_ed(nopt);
+      if (eid) {
+        nlo_set_eid(nopt);
       }
       
-      if (efk) {
-        /* 使用文件key */
-        nlo_set_efk(nopt);
-        memcpy(nopt+sizeof(NagaLuaOpt), fkeyp, fks);
-      } else {
-        memcpy(nopt+sizeof(NagaLuaOpt), &fkey, fks);
+      if (ei) {
+        nlo_set_ei(nopt);
       }
       
-      /* 设置密码长度 */
-      nlo_set_ks(nopt,fks);
+      if (ef || ed) {
+        
+        if (ef) {
+          nlo_set_ef(nopt);
+        }
+        
+        if (ed) {
+          nlo_set_ed(nopt);
+        }
+        
+        if (efk) {
+          /* 使用文件key */
+          nlo_set_efk(nopt);
+          memcpy(nopt+sizeof(NagaLuaOpt), fkeyp, fks);
+        } else {
+          memcpy(nopt+sizeof(NagaLuaOpt), &fkey, fks);
+        }
+        
+        /* 设置密码长度 */
+        nlo_set_ks(nopt,fks);
+      }
+      
+      nluaU_dump(L,f,writer,D,stripping,(NagaLuaOpt*)nopt, fkey);
     }
-    
-    nluaU_dump(L,f,writer,D,stripping,(NagaLuaOpt*)nopt, fkey);
     lua_unlock(L);
     if (ferror(D)) cannot("write");
     if (fclose(D)) cannot("close");
@@ -348,11 +329,12 @@ static int pmain(lua_State* L) {
 int main(int argc, char* argv[]) {
   lua_State* L;
   struct Smain s;
-  int i=doargs(argc,argv);
-  argc-=i; argv+=i;
-  if (argc<=0) usage("no input files given");
+  int i;
   L=lua_open();
   if (L==NULL) fatal("not enough memory for state");
+  i=doargs(L,argc,argv);
+  argc-=i; argv+=i;
+  if (argc<=0) usage("no input files given");
   s.argc=argc;
   s.argv=argv;
   if (lua_cpcall(L,pmain,&s)!=0) fatal(lua_tostring(L,-1));

@@ -157,7 +157,6 @@ static void generate_opmodes(OpRun* om, OpCode* tab) {
   }
 }
 
-#if defined(nluac_c)
 /* 从新的编码表中,重新排列opcode名称表顺序
  * od opcode派遣函数表
  * tab opcode名称表
@@ -168,7 +167,6 @@ static void generate_opnames(const char** on, OpCode* tab) {
     on[i] = luaP_opnames[tab[i]];
   }
 }
-#endif
 
 /* opcode随机初始化
  * L 虚拟机状态指针
@@ -190,10 +188,7 @@ void nluaV_oprinit(global_State* g) {
   nluaP_oprecode(r->optab);
   generate_opdtab(r->opcodedisp, r->optab);
   generate_opmodes(r->opmods, r->optab);
-  
-#if defined(nluac_c)
   generate_opnames(r->opnames, r->optab);
-#endif
 }
 
 /* opcode表根据L中的数值重新设置
@@ -209,9 +204,7 @@ void nluaV_opreset(global_State* g) {
   nluaP_oprecode(r->optab);
   generate_opdtab(r->opcodedisp, r->optab);
   generate_opmodes(r->opmods, r->optab);
-#if defined(nluac_c)
   generate_opnames(r->opnames, r->optab);
-#endif
 }
 
 /* opcode规则表到虚拟机状态
@@ -229,9 +222,7 @@ void nluaV_oprread(global_State* g, OpCode* tab) {
   nluaP_oprecode(r->optab);
   generate_opdtab(r->opcodedisp, r->optab);
   generate_opmodes(r->opmods, r->optab);
-#if defined(nluac_c)
   generate_opnames(r->opnames, r->optab);
-#endif
 }
 
 /* opcode规则表到虚拟机状态
@@ -239,7 +230,7 @@ void nluaV_oprread(global_State* g, OpCode* tab) {
  * tab 要填充的opcode表
  */
 void nluaV_oprwrite(global_State* g, OpCode* tab) {
-  memcpy(tab, g->oprule.optab, sizeof(OpCode)*NUM_OPCODES);
+  memcpy(tab, g->oprule.optab, sizeof(g->oprule.optab));//sizeof(OpCode)*NUM_OPCODES
 }
 
 /* 指令开始执行前作的动作
@@ -252,7 +243,8 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
   
   /* 是否解密代码 */
   if (nlo_opt_ei(opt)) {
-    //nluaV_DeInstructionData deins = G(L)->ideins;
+    nluaV_DeInstruction deins = G(L)->ideins;
+    deins(L, pins);
   }
   
   /* 是否解密指令数据 */
@@ -269,7 +261,7 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
  * pins 当前要执行指令的指针
  */
 int nluaV_insend(lua_State *L, Instruction* pins) {
-    return 0;
+  return 0;
 }
 
 /* 加密指令部分
@@ -277,7 +269,14 @@ int nluaV_insend(lua_State *L, Instruction* pins) {
  * pins 当前要执行指令的指针
  */
 int nluaV_enins(lua_State* L, Instruction* pins) {
-    return 0;
+  unsigned int key;
+  global_State* g = G(L);
+  
+  /* 加密是在nluac中，不需要动态生成密码 */
+  
+  key=g->ekey;
+  return g->enbuf(L, key, (unsigned char*)pins,
+                  (unsigned char*)pins, sizeof(Instruction));
 }
 
 /* 解密指令部分
@@ -285,7 +284,19 @@ int nluaV_enins(lua_State* L, Instruction* pins) {
  * pins 当前要执行指令的指针
  */
 int nluaV_deins(lua_State* L, Instruction* pins) {
-    return 0;
+  unsigned int key;
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  
+  if (nlo_opt_efk(opt)) {
+    key=g->fkmake(L,g->fkeyp);
+    key=crc32((unsigned char*)&key, 4);
+  } else {
+    key=g->ekey;
+  }
+  
+  return g->enbuf(L, key, (unsigned char*)pins,
+                  (unsigned char*)pins, sizeof(Instruction));
 }
 
 /* 加密缓存
@@ -323,7 +334,7 @@ lu_int32 nluaV_fkmake(lua_State* L, const char* path) {
   
   fp = fopen(path, "rb");
   if (fp == NULL) {
-    return -1;
+    return 0;
   }
   
   /* 获取文件长度 */
@@ -334,11 +345,11 @@ lu_int32 nluaV_fkmake(lua_State* L, const char* path) {
   /* 读取文件 */
   fbuf=malloc(fsize);
   if (fbuf == NULL) {
-    return -1;
+    return 0;
   }
   r = fread(fbuf, 1, fsize, fp);
   if (r != fsize) {
-    return -1;
+    return 0;
   }
   
   fkey=(unsigned int)crc32((unsigned char*)fbuf, (unsigned int)fsize);

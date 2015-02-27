@@ -85,10 +85,7 @@ typedef struct OPCODE_RULE {
   OpCode optab[NUM_OPCODES];                  /* opcode编码表 */
   OpRun opmods[NUM_OPCODES];                  /* opcode模式表 */
   nluaV_Instruction opcodedisp[NUM_OPCODES];  /* opcode分派函数 */
-  
-#if defined(nluac_c)
   const char* opnames[NUM_OPCODES+1];         /* opcode名称表 */
-#endif
 } OPR;
 
 #define MAX_KEY_PATH              128
@@ -122,6 +119,7 @@ typedef struct global_State {
   
   /* nlua
    */
+  int nboot;                        /* 标记已经启动 */
   int is_nlua;                      /* 是nlua的文件格式 */
   OPR oprule;                       /* opcode编码规则 */
   unsigned int nopt;                /* nlua的安全选项 */
@@ -131,15 +129,15 @@ typedef struct global_State {
   };
   
   /* 指令调用前后要执行的函数 */
-  nluaV_InstructionStart istart;
-  nluaV_InstructionEnd iend;
-  nluaV_EnInstructionData ienidata;
-  nluaV_DeInstructionData ideidata;
-  nluaV_EnInstruction ienins;
-  nluaV_DeInstruction ideins;
-  nluaV_EnBuffer enbuf;
-  nluaV_DeBuffer debuf;
-  nluaV_MakeFileKey fkmake;
+  nluaV_InstructionStart istart;    /* 指令开始前执行的函数 */
+  nluaV_InstructionEnd iend;        /* 指令结束后执行的函数 */
+  nluaV_EnInstructionData ienidata; /* 加密指令数据 */
+  nluaV_DeInstructionData ideidata; /* 解密指令数据 */
+  nluaV_EnInstruction ienins;       /* 加密指令 */
+  nluaV_DeInstruction ideins;       /* 解密指令 */
+  nluaV_EnBuffer enbuf;             /* 加密缓存 */
+  nluaV_DeBuffer debuf;             /* 解密缓存 */
+  nluaV_MakeFileKey fkmake;         /* 对文件内容取4字节哈希值 */
   
 } global_State;
 
@@ -214,6 +212,8 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
  */
 LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt);
 LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua);
+LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key);
+LUAI_FUNC void nluaE_setfkey (lua_State *L, const char* key);
 
 #endif
 

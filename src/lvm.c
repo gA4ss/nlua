@@ -385,6 +385,7 @@ typedef enum {
 #define op_common() \
   int nret=0; \
   StkId ra; \
+  do_op_start(ins); \
   ra=RA(ins); \
   TValue *k=cl->p->k; \
   lua_assert((*base) == L->base && L->base == L->ci->base); \
@@ -394,7 +395,6 @@ typedef enum {
 static int op_move(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                    const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   setobjs2s(L, ra, RB(ins));
   do_op_end(ins);
   return OPCODE_DISPATCH_CONTINUE;
@@ -403,7 +403,6 @@ static int op_move(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_loadk(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                     const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   setobj2s(L, ra, KBx(ins));
   do_op_end(ins);
   return OPCODE_DISPATCH_CONTINUE;
@@ -412,7 +411,6 @@ static int op_loadk(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_loadbool(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   /* 如果C为真，则跳过下一条指令 */
   if (GETARG_C(ins)) {
     (*pc)++;
@@ -425,8 +423,6 @@ static int op_loadnil(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                       const Instruction** pc, int* pnexeccalls) {
   TValue *rb;
   op_common();
-  do_op_start(ins);
-  
   rb=RB(ins);
   do {
     setnilvalue(rb--);
@@ -439,7 +435,6 @@ static int op_getupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   int b;
   op_common();
-  do_op_start(ins);
   b = GETARG_B(ins);
   setobj2s(L, ra, cl->upvals[b]->v);
   do_op_end(ins);
@@ -451,8 +446,6 @@ static int op_getglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl
   TValue g;
   TValue *rb;
   op_common();
-  do_op_start(ins);
-  
   rb = KBx(ins);
   sethvalue(L, &g, cl->env);
   lua_assert(ttisstring(rb));
@@ -465,8 +458,6 @@ static int op_getglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl
 static int op_gettable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
-  
   Protect(luaV_gettable(L, RB(ins), RKC(ins), ra));
   
   do_op_end(ins);
@@ -477,7 +468,6 @@ static int op_setglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl
                         const Instruction** pc, int* pnexeccalls) {
   TValue g;
   op_common();
-  do_op_start(ins);
   
   sethvalue(L, &g, cl->env);
   lua_assert(ttisstring(KBx(ins)));
@@ -491,7 +481,6 @@ static int op_setupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   UpVal *uv;
   op_common();
-  do_op_start(ins);
   
   uv = cl->upvals[GETARG_B(ins)];
   setobj(L, uv->v, ra);
@@ -504,7 +493,6 @@ static int op_setupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_settable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   Protect(luaV_settable(L, ra, RKB(ins), RKC(ins)));
   
@@ -516,7 +504,6 @@ static int op_newtable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   int b, c;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins);
   c = GETARG_C(ins);
@@ -531,7 +518,6 @@ static int op_self(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                    const Instruction** pc, int* pnexeccalls) {
   StkId rb;
   op_common();
-  do_op_start(ins);
   
   rb = RB(ins);
   setobjs2s(L, ra+1, rb);
@@ -544,7 +530,6 @@ static int op_self(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_add(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_numadd, TM_ADD);
   
@@ -555,7 +540,6 @@ static int op_add(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_sub(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_numsub, TM_SUB);
   
@@ -566,7 +550,6 @@ static int op_sub(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_mul(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_nummul, TM_MUL);
   
@@ -577,7 +560,6 @@ static int op_mul(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_div(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_numdiv, TM_DIV);
   
@@ -588,7 +570,6 @@ static int op_div(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_mod(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_nummod, TM_MOD);
   
@@ -599,7 +580,6 @@ static int op_mod(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_pow(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   arith_op(luai_numpow, TM_POW);
   
@@ -611,7 +591,6 @@ static int op_unm(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   TValue *rb;
   op_common();
-  do_op_start(ins);
   
   rb = RB(ins);
   if (ttisnumber(rb)) {
@@ -630,7 +609,6 @@ static int op_not(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   int res;
   op_common();
-  do_op_start(ins);
   
   res = l_isfalse(RB(ins));  /* next assignment may change this value */
   setbvalue(ra, res);
@@ -643,7 +621,6 @@ static int op_len(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   const TValue *rb;
   op_common();
-  do_op_start(ins);
   
   rb = RB(ins);
   switch (ttype(rb)) {
@@ -672,7 +649,6 @@ static int op_concat(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   int b;
   int c;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins);
   c = GETARG_C(ins);
@@ -686,7 +662,6 @@ static int op_concat(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_jmp(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                   const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   dojump(L, (*pc), GETARG_sBx(ins));
   
@@ -699,7 +674,6 @@ static int op_eq(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   TValue *rb;
   TValue *rc;
   op_common();
-  do_op_start(ins);
   
   rb = RKB(ins);
   rc = RKC(ins);
@@ -715,7 +689,6 @@ static int op_eq(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_lt(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                  const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   Protect(
           if (luaV_lessthan(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
@@ -729,7 +702,6 @@ static int op_lt(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_le(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                  const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   Protect(
           if (lessequal(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
@@ -743,7 +715,6 @@ static int op_le(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_test(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                    const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   if (l_isfalse(ra) != GETARG_C(ins))
     dojump(L, (*pc), GETARG_sBx(**pc));
@@ -756,7 +727,6 @@ static int op_testset(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                       const Instruction** pc, int* pnexeccalls) {
   TValue *rb;
   op_common();
-  do_op_start(ins);
   
   rb = RB(ins);
   if (l_isfalse(rb) != GETARG_C(ins)) {
@@ -773,7 +743,6 @@ static int op_call(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   int b;
   int nresults;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins);
   nresults = GETARG_C(ins) - 1;
@@ -807,7 +776,6 @@ static int op_tailcall(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   int b;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins);
   if (b != 0) L->top = ra+b;  /* else previous instruction set top */
@@ -851,7 +819,6 @@ static int op_return(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                      const Instruction** pc, int* pnexeccalls) {
   int b;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins);
   if (b != 0) L->top = ra+b-1;
@@ -879,7 +846,6 @@ static int op_forloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   lua_Number idx;
   lua_Number limit;
   op_common();
-  do_op_start(ins);
   
   step = nvalue(ra+2);
   idx = luai_numadd(nvalue(ra), step); /* increment index */
@@ -901,7 +867,6 @@ static int op_forprep(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   const TValue *plimit;
   const TValue *pstep;
   op_common();
-  do_op_start(ins);
   
   init = ra;
   plimit = ra+1;
@@ -924,7 +889,6 @@ static int op_tforloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   StkId cb;
   op_common();
-  do_op_start(ins);
   
   cb = ra + 3;  /* call base */
   setobjs2s(L, cb+2, ra+2);
@@ -950,7 +914,6 @@ static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   int last;
   Table *h;
   op_common();
-  do_op_start(ins);
   
   n = GETARG_B(ins);
   c = GETARG_C(ins);
@@ -979,7 +942,6 @@ static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_close(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                     const Instruction** pc, int* pnexeccalls) {
   op_common();
-  do_op_start(ins);
   
   luaF_close(L, ra);
   
@@ -993,7 +955,6 @@ static int op_closure(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   Closure *ncl;
   int nup, j;
   op_common();
-  do_op_start(ins);
   
   p = cl->p->p[GETARG_Bx(ins)];
   nup = p->nups;
@@ -1021,7 +982,6 @@ static int op_vararg(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   int n;
   CallInfo *ci;
   op_common();
-  do_op_start(ins);
   
   b = GETARG_B(ins) - 1;
   ci = L->ci;

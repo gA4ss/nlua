@@ -268,7 +268,6 @@ LUALIB_API void luaI_openlib (lua_State *L, const char *libname,
 }
 
 
-
 /*
 ** {======================================================
 ** getn-setn: size for arrays

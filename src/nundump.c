@@ -48,12 +48,13 @@ static void error(LoadState* S, const char* why) {
 /* 从S中读取size个字节到b中 */
 static void LoadBlock(LoadState* S, void* b, size_t size) {
   NagaLuaOpt* nopt=&(S->opt);
+  global_State* g=G(S->L);
   size_t r=luaZ_read(S->Z,b,size);
   IF (r!=0, "unexpected end");
   
   /* 是否需要解密 */
   if (nlo_ef(nopt)) {
-    XorArray(S->key, b, b, (unsigned int)size);
+    g->debuf(S->L, S->key, b, b, (unsigned int)size);
   }
 }
 
@@ -82,6 +83,7 @@ static lua_Number LoadNumber(LoadState* S) {
 /* 从字节码文件中读取字符串 */
 static TString* LoadString(LoadState* S) {
   size_t size;
+  global_State* g=G(S->L);
   LoadVar(S,size);                        /* 读取字符串长度 */
   if (size==0)
     return NULL;
@@ -92,7 +94,7 @@ static TString* LoadString(LoadState* S) {
     
     /* 是否需要解密 */
     if (nlo_ed(nopt)) {
-      XorArray(S->dkey, (unsigned char*)s,
+      g->debuf(S->L,S->dkey, (unsigned char*)s,
                (unsigned char*)s, (unsigned int)size);
     }
     
@@ -182,6 +184,7 @@ static void LoadDebug(LoadState* S, Proto* f) {
  */
 static Proto* LoadFunction(LoadState* S, TString* p) {
   Proto* f;
+  NagaLuaOpt* nopt=&(S->opt);
   
   /* 调用lua函数栈太多了则出错 */
   if (++S->L->nCcalls > LUAI_MAXCCALLS) error(S,"code too deep");
@@ -204,8 +207,11 @@ static Proto* LoadFunction(LoadState* S, TString* p) {
   LoadConstants(S,f);                     /* 读取常量 */
   LoadDebug(S,f);                         /* 读取调试信息 */
   
-  /* 如果出错则退出 */
-  IF (!luaG_checkcode(S->L, f), "bad code");
+  /* 如果没设置了加密代码与加密指令数据则检验代码 */
+  if (!nlo_eid(nopt) && !nlo_ei(nopt)) {
+    /* 如果出错则退出 */
+    IF (!luaG_checkcode(S->L, f), "bad code");
+  }
   
   /* 栈的恢复 */
   S->L->top--;
@@ -242,6 +248,7 @@ static void LoadOptions(LoadState* S) {
   nopt = &(S->opt);
   /* 读取一个选项 */
   LoadBlockForce(S,nopt,sizeof(NagaLuaOpt));
+  nluaE_setopt(S->L, nopt->opt);
   
   /* 解密NagaOpt密钥 */
   if (nopt->ks) {
@@ -269,14 +276,19 @@ static void LoadOptions(LoadState* S) {
     /* 如果采用文件key */
     if (nlo_efk(nopt)) {
       k=nluaU_makefilekey(S->L, (char*)realk);
+      if (k==0) {
+        error(S,"make file key failed");
+      }
+      nluaE_setfkey(S->L, (const char*)realk);
     } else {
       k=*(unsigned int*)realk;
+      nluaE_setkey(S->L, k);
     }
     
     S->key=S->dkey=k;
     
     /* 获取加密数据key */
-    if (nlo_ed(nopt)) {
+    if (nlo_ed(nopt) || nlo_eid(nopt)) {
       S->dkey=crc32((unsigned char*)&k, 4);
     }
     
@@ -285,7 +297,9 @@ static void LoadOptions(LoadState* S) {
 }
 
 static void LoadOpcodeTable(LoadState* S) {
-  
+  OpCode tab[NUM_OPCODES];
+  LoadBlock(S,tab,sizeof(tab));
+  nluaV_oprread(G(S->L),tab);
 }
 
 /* 加载预编译代码
@@ -331,46 +345,15 @@ void nluaU_header (char* h) {
   *h++=(char)(((lua_Number)0.5)==0);      /* is lua_Number integral? */
 }
 
-#ifdef LUAC_TRUST_BINARIES
-#define error2(L,filename,why)
-#else
-static void error2(lua_State* L, const char* filename, const char* why) {
-  luaO_pushfstring(L,"%s: %s in file",filename,why);
-  luaD_throw(L,LUA_ERRSYNTAX);
-}
-#endif
-
 /* 产生文件key */
 LUAI_FUNC unsigned int nluaU_makefilekey(lua_State *L, char* filename) {
-  FILE* fp=NULL;
-  unsigned int fkey=0;
-  long fsize=0;
-  size_t r=0;
-  void* fbuf=NULL;
+  global_State* g;
+  unsigned int fkey;
   
-  fp = fopen(filename, "rb");
-  if (fp == NULL) {
-    error2(L, filename, "open file");
-  }
+  lua_assert(L);
+  lua_assert(filename);
   
-  /* 获取文件长度 */
-  fseek(fp, 0, SEEK_END);
-  fsize = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-  
-  /* 读取文件 */
-  fbuf=malloc(fsize);
-  if (fbuf == NULL) {
-    error2(L, filename, "malloc");
-  }
-  r = fread(fbuf, 1, fsize, fp);
-  if (r != fsize) {
-    error2(L, filename, "malloc");
-  }
-  
-  fkey=(unsigned int)crc32((unsigned char*)fbuf, (unsigned int)fsize);
-  free(fbuf);
-  fclose(fp);
-  
+  g=G(L);
+  fkey=g->fkmake(L,filename);
   return fkey;
 }

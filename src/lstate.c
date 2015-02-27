@@ -154,11 +154,16 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 
 /* 初始化nlua */
 static void init_nlua(global_State *g) {
+  
+  if (g->nboot) {
+    return;
+  }
+  g->nboot=1;
+  
   /* 文件类型初始化 */
   g->is_nlua = 0;
-  
-  g->nopt = 1;
-  
+  g->nopt = 0;
+  memset(g->fkeyp, 0, MAX_KEY_PATH);
   /* 设置指令前后函数 */
   g->istart = nluaV_insstart;
   g->iend = nluaV_insend;
@@ -171,9 +176,6 @@ static void init_nlua(global_State *g) {
   g->enbuf = nluaV_enbuf;
   g->debuf = nluaV_debuf;
   g->fkmake = nluaV_fkmake;
-  
-  /* 设置默认的key */
-  //strcpy(g->fkeypath, "/Users/devilogic/naga.log");
   
   /* 进行opcode规则的重新编码 */
   nluaV_oprinit(g);
@@ -188,6 +190,7 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   /* 分配一个主线程结构状态 */
   void *l = (*f)(ud, NULL, 0, state_size(LG));
   if (l == NULL) return NULL;
+  memset(l,0,state_size(LG));  /* 清空刚分配的内存 */
   
   /* 返回lua_State */
   L = tostate(l);
@@ -273,4 +276,12 @@ LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt) {
 
 LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua) {
   G(L)->is_nlua = is_nlua;
+}
+
+LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key) {
+  G(L)->ekey=key;
+}
+
+LUAI_FUNC void nluaE_setfkey (lua_State *L, const char* key) {
+  strcpy(G(L)->fkeyp,key);
 }

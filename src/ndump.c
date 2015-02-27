@@ -32,6 +32,7 @@ typedef struct {
 #define DumpVar(x,D)        DumpMem(&x,1,sizeof(x),D)
 
 static void DumpBlock(const void* b, size_t size, DumpState* D) {
+  global_State* g=G(D->L);
   NagaLuaOpt* nopt=D->opt;
   
   if (D->status==0) {
@@ -44,7 +45,7 @@ static void DumpBlock(const void* b, size_t size, DumpState* D) {
         // printf("malloc failed\n");
         exit(-1);
       }
-      XorArray(D->key, (unsigned char*)b,
+      g->enbuf(D->L, D->key, (unsigned char*)b,
                (unsigned char*)tmp, (unsigned int)size);
       D->status=(*D->writer)(D->L,tmp,size,D->data);
       free(tmp);
@@ -75,6 +76,7 @@ static void DumpVector(const void* b, int n, size_t size, DumpState* D) {
 }
 
 static void DumpString(const TString* s, DumpState* D) {
+  global_State* g=G(D->L);
   NagaLuaOpt* nopt=D->opt;
   if (s==NULL || getstr(s)==NULL) {
     size_t size=0;
@@ -92,7 +94,7 @@ static void DumpString(const TString* s, DumpState* D) {
         exit(-1);
       }
       memset(tmp, 0, size);
-      XorArray(D->dkey, (unsigned char*)getstr(s),
+      g->enbuf(D->L, D->dkey, (unsigned char*)getstr(s),
                (unsigned char*)tmp, (unsigned int)size);
       DumpBlock(tmp,size,D);
       free(tmp);
@@ -101,7 +103,28 @@ static void DumpString(const TString* s, DumpState* D) {
   }
 }
 
-#define DumpCode(f,D)	 DumpVector(f->code,f->sizecode,sizeof(Instruction),D)
+#define DumpCode2(f,D)	 DumpVector(f->code,f->sizecode,sizeof(Instruction),D)
+static void DumpCode(const Proto* f,DumpState* D) {
+  int i;
+  global_State* g=G(D->L);
+  NagaLuaOpt* nopt=D->opt;
+  if (nlo_eid(nopt) || nlo_ei(nopt)) {
+    /* 是否加密指令 */
+    if (nlo_eid(nopt)) {
+      for (i=0; i<f->sizecode; i++) g->ienidata(D->L,&(f->code[i]));
+    }
+    
+    /* 是否加密指令 */
+    if (nlo_ei(nopt)) {
+      for (i=0; i<f->sizecode; i++) {
+        for (i=0; i<f->sizecode; i++) g->ienins(D->L,&(f->code[i]));
+      }
+    }
+  }/* end if */
+  
+  /* 刷入文件 */
+  DumpCode2(f,D);
+}
 
 static void DumpFunction(const Proto* f, const TString* p, DumpState* D);
 
@@ -185,8 +208,10 @@ static void DumpOptions(DumpState* D) {
   DumpBlockForce(nopt,ops,D);
 }
 
-static void DumpOpcodeTable(DumpState* D) {
-  
+static void DumpOpcodeTable(lua_State* L, DumpState* D) {
+  OpCode tab[NUM_OPCODES];
+  nluaV_oprwrite(G(L),tab);
+  DumpBlock(tab,sizeof(tab),D);
 }
 
 /* dump接口 */
@@ -201,11 +226,14 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   D.status=0;
   D.opt=nopt;
   D.key=ekey;
-  if (nlo_ed(nopt)) {
+  if (nlo_ed(nopt) || (nlo_ei(nopt))) {
     D.dkey=crc32((unsigned char*)&ekey, 4);
   } else {
     D.dkey=ekey;
   }
+  
+  /* 设置key */
+  nluaE_setkey(L, D.dkey);
   
   /* 加密NagaOpt密钥 */
   if (nlo_ef(nopt) || (nlo_ed(nopt))) {
@@ -220,7 +248,7 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   
   DumpHeader(&D);
   DumpOptions(&D);
-  DumpOpcodeTable(&D);
+  DumpOpcodeTable(L,&D);
   DumpFunction(f,NULL,&D);
   return D.status;
 }

@@ -455,7 +455,7 @@ static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg)
 
 /* }====================================================== */
 
-
+/* 检查代码是否出错 */
 int luaG_checkcode (lua_State *L, const Proto *pt) {
   return (symbexec(L, pt, pt->sizecode, NO_REG) != 0);
 }

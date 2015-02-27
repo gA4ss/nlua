@@ -41,6 +41,7 @@ static void laction (int i) {
 
 static void print_usage (void) {
   fprintf(stderr,
+  "please view http://www.nagain.com\n"
   "usage: %s [options] [script [args]].\n"
   "Available options are:\n"
   "  -e stat  execute string " LUA_QL("stat") "\n"
@@ -290,13 +291,15 @@ static int collectargs (char **argv, int *pi, int *pv, int *pe) {
   return 0;
 }
 
-
+/* 检查参数 */
 static int runargs (lua_State *L, char **argv, int n) {
   int i;
+  /* 遍历参数 */
   for (i = 1; i < n; i++) {
     if (argv[i] == NULL) continue;
     lua_assert(argv[i][0] == '-');
     switch (argv[i][1]) {  /* option */
+      /* 执行一段字符串脚步 */
       case 'e': {
         const char *chunk = argv[i] + 2;
         if (*chunk == '\0') chunk = argv[++i];
@@ -305,6 +308,7 @@ static int runargs (lua_State *L, char **argv, int n) {
           return 1;
         break;
       }
+      /* 加载一个库 */
       case 'l': {
         const char *filename = argv[i] + 2;
         if (*filename == '\0') filename = argv[++i];

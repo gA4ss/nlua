@@ -60,7 +60,7 @@
       <CommandLineArguments>
          <CommandLineArgument
             argument = "/Users/devilogic/workspace/love.lua"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-k iloveyou -1 -2 -3 -4 -5 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
@@ -69,6 +69,22 @@
          <CommandLineArgument
             argument = "-1 -2 -3 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-2 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-1 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-l /Users/devilogic/workspace/test.dump"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/devilogic/workspace/test.dump"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-k /Users/devilogic/workspace/hello.lua -x /Users/devilogic/workspace/hello.lua -1 -2 -3 -4 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"

@@ -505,6 +505,7 @@ static void f_parser (lua_State *L, void *ud) {
   if (c == LUA_SIGNATURE[0]) {
     tf = luaU_undump(L, p->z, &p->buff, p->name);
   } else if (c == NLUA_SIGNATURE[0]) {
+    nluaE_setnlua(L,1);
     tf = nluaU_undump(L, p->z, &p->buff, p->name);
   } else {
     /* 纯脚本 */
