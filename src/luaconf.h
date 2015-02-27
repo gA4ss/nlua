@@ -755,7 +755,7 @@ union luai_Cast { double l_d; long l_l; };
 ** Local configuration. You can use this space to add your redefinitions
 ** without modifying the main part of the file.
 */
-
+#define UNUSED(x)           (void)(x)
 
 
 #endif

@@ -10,7 +10,7 @@
 #define lstate_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "ldebug.h"
 #include "ldo.h"
@@ -22,6 +22,7 @@
 #include "lstring.h"
 #include "ltable.h"
 #include "ltm.h"
+#include "nundump.h"
 
 /* 计算整个LG的长度 */
 #define state_size(x)	(sizeof(x) + LUAI_EXTRASPACE)
@@ -40,17 +41,17 @@ typedef struct LG {
   
 /* 初始化栈状态 */
 static void stack_init (lua_State *L1, lua_State *L) {
-  /* initialize CallInfo array */
+  /* 初始化CallInfo队列 */
   L1->base_ci = luaM_newvector(L, BASIC_CI_SIZE, CallInfo);
   L1->ci = L1->base_ci;
   L1->size_ci = BASIC_CI_SIZE;
   L1->end_ci = L1->base_ci + L1->size_ci - 1;
-  /* initialize stack array */
+  /* 初始化对战队列 */
   L1->stack = luaM_newvector(L, BASIC_STACK_SIZE + EXTRA_STACK, TValue);
   L1->stacksize = BASIC_STACK_SIZE + EXTRA_STACK;
   L1->top = L1->stack;
   L1->stack_last = L1->stack+(L1->stacksize - EXTRA_STACK)-1;
-  /* initialize first ci */
+  /* 初始化第一个ci */
   L1->ci->func = L1->top;
   setnilvalue(L1->top++);  /* `function' entry for this `ci' */
   L1->base = L1->ci->base = L1->top;
@@ -151,6 +152,33 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
   luaM_freemem(L, fromstate(L1), state_size(lua_State));
 }
 
+/* 初始化nlua */
+static void init_nlua(global_State *g) {
+  /* 文件类型初始化 */
+  g->is_nlua = 0;
+  
+  g->nopt = 1;
+  
+  /* 设置指令前后函数 */
+  g->istart = nluaV_insstart;
+  g->iend = nluaV_insend;
+  
+  /* 设置指令数据加解密函数 */
+  g->ienidata = nluaV_enidata;
+  g->ideidata = nluaV_deidata;
+  
+  /* 设置文件加解密函数 */
+  g->enbuf = nluaV_enbuf;
+  g->debuf = nluaV_debuf;
+  g->fkmake = nluaV_fkmake;
+  
+  /* 设置默认的key */
+  //strcpy(g->fkeypath, "/Users/devilogic/naga.log");
+  
+  /* 进行opcode规则的重新编码 */
+  nluaV_oprinit(g);
+}
+
 /* 分配新的状态 */
 LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   int i;
@@ -197,6 +225,10 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcdept = 0;
   /* 初始化元操作 */
   for (i=0; i<NUM_TAGS; i++) g->mt[i] = NULL;
+  
+  /* 初始化nlua */
+  init_nlua(g);
+  
   /* 打开这条线程状态 */
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != 0) {
     /* memory allocation error: free partial state */
@@ -231,3 +263,14 @@ LUA_API void lua_close (lua_State *L) {
   close_state(L);
 }
 
+/*
+ * nlua
+ */
+
+LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt) {
+  G(L)->nopt = opt;
+}
+
+LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua) {
+  G(L)->is_nlua = is_nlua;
+}

@@ -10,7 +10,7 @@
 #define lparser_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lcode.h"
 #include "ldebug.h"
@@ -371,7 +371,7 @@ static void close_func (LexState *ls) {
   f->sizelocvars = fs->nlocvars;
   luaM_reallocvector(L, f->upvalues, f->sizeupvalues, f->nups, TString *);
   f->sizeupvalues = f->nups;
-  lua_assert(luaG_checkcode(f));
+  lua_assert(luaG_checkcode(L, f));
   lua_assert(fs->bl == NULL);
   ls->fs = fs->prev;
   /* last token read was anchored in defunct function; must reanchor it */
@@ -774,7 +774,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
   luaX_next(ls);
 }
 
-
+/* 从词法标记从取得一元操作符号 */
 static UnOpr getunopr (int op) {
   switch (op) {
     case TK_NOT: return OPR_NOT;
@@ -784,7 +784,7 @@ static UnOpr getunopr (int op) {
   }
 }
 
-
+/* 从词法标记从取得二元操作符号 */
 static BinOpr getbinopr (int op) {
   switch (op) {
     case '+': return OPR_ADD;
@@ -806,7 +806,6 @@ static BinOpr getbinopr (int op) {
   }
 }
 
-
 static const struct {
   lu_byte left;  /* left priority for each binary operator */
   lu_byte right; /* right priority */
@@ -821,10 +820,10 @@ static const struct {
 #define UNARY_PRIORITY	8  /* priority for unary operators */
 
 
-/*
-** subexpr -> (simpleexp | unop subexpr) { binop subexpr }
-** where `binop' is any binary operator with a priority higher than `limit'
-*/
+/* 分析子表达式
+ * (simpleexp | unop subexpr) { binop subexpr }
+ * `binop` 是二元操作符号，以及高于limit优先级
+ */
 static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   BinOpr op;
   UnOpr uop;
@@ -837,7 +836,11 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   }
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
-  op = getbinopr(ls->t.token);
+  op = getbinopr(ls->t.token);              /* 取得二元操作符号 */
+    
+  /* 当前操作符号必须是二元操作符号 &&
+   * 当前二元操作符号的左结合律要高于参数limit
+   */
   while (op != OPR_NOBINOPR && priority[op].left > limit) {
     expdesc v2;
     BinOpr nextop;
@@ -851,7 +854,6 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   leavelevel(ls);
   return op;  /* return first untreated operator */
 }
-
 
 static void expr (LexState *ls, expdesc *v) {
   subexpr(ls, v, 0);

@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-#define nlua_compile
+//#define nlua_compile
 #ifdef nlua_compile
 
 #include <errno.h>
@@ -15,7 +15,7 @@
 #define nluac_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 #include "lauxlib.h"
 
 #include "ldo.h"
@@ -246,11 +246,14 @@ static const Proto* combine(lua_State* L, int n) {
     /* 遍历这些子函数,并且汇编调用代码 */
     for (i=0; i<n; i++) {
       f->p[i]=toproto(L,i-n-1);
-      f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
-      f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
+      //f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
+      //f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
+      f->code[pc++]=nluaP_createABx(L,OP_CLOSURE,0,i);
+      f->code[pc++]=nluaP_createABC(L,OP_CALL,0,1,1);
     }
     /* 汇编一条返回指令 */
-    f->code[pc++]=CREATE_ABC(OP_RETURN,0,1,0);
+    //f->code[pc++]=CREATE_ABC(OP_RETURN,0,1,0);
+    f->code[pc++]=nluaP_createABC(L,OP_RETURN,0,1,0);
     return f;
   }
 }
@@ -282,7 +285,7 @@ static int pmain(lua_State* L) {
   f=combine(L,argc);
   
   /* 反汇编 */
-  if (listing) luaU_print(f,listing>1);
+  if (listing) luaU_print(L, f,listing>1);
   
   /* 输出为字节代码文件 */
   if (dumping) {

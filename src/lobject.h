@@ -207,7 +207,7 @@ typedef union TString {
 } TString;
 
 
-#define getstr(ts)	cast(const char *, (ts) + 1)
+#define getstr(ts)      cast(const char *, (ts) + 1)
 #define svalue(o)       getstr(rawtsvalue(o))
 
 
@@ -230,20 +230,20 @@ typedef struct Proto {
   TValue *k;                    /* 函数使用的常量队列 */
   Instruction *code;
   struct Proto **p;             /* 在当前函数中定义的函数队列 */
-  int *lineinfo;                /* map from opcodes to source lines */
-  struct LocVar *locvars;       /* information about local variables */
-  TString **upvalues;           /* upvalue names */
+  int *lineinfo;                /* 每条指令对应的源代码行数 */
+  struct LocVar *locvars;       /* 局部变量信息 */
+  TString **upvalues;           /* upvalue的名称 */
   TString  *source;
   int sizeupvalues;
   int sizek;                    /* 常量的个数 */
   int sizecode;
   int sizelineinfo;
-  int sizep;                    /* size of `p' */
+  int sizep;                    /* 子函数的数量 */
   int sizelocvars;
   int linedefined;
   int lastlinedefined;
   GCObject *gclist;
-  lu_byte nups;                 /* number of upvalues */
+  lu_byte nups;                 /* upvalues的数量 */
   lu_byte numparams;
   lu_byte is_vararg;
   lu_byte maxstacksize;

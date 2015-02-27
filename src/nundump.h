@@ -31,6 +31,13 @@ typedef struct naga_lua_options {
 #define nlo_ed(o)     (((NagaLuaOpt*)o)->opt & 0x20)
 #define nlo_ks(o)     (((NagaLuaOpt*)o)->ks)
 
+#define nlo_opt_rop(o)    ((o) & 0x01)
+#define nlo_opt_eid(o)    ((o) & 0x02)
+#define nlo_opt_ei(o)     ((o) & 0x04)
+#define nlo_opt_ef(o)     ((o) & 0x08)
+#define nlo_opt_efk(o)    ((o) & 0x10)
+#define nlo_opt_ed(o)     ((o) & 0x20)
+
 #define nlo_set_rop(o)    (((NagaLuaOpt*)o)->opt |= 0x01)
 #define nlo_set_eid(o)    (((NagaLuaOpt*)o)->opt |= 0x02)
 #define nlo_set_ei(o)     (((NagaLuaOpt*)o)->opt |= 0x04)
@@ -57,7 +64,7 @@ LUAI_FUNC int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
 
 #ifdef nluac_c
 /* print one chunk; from print.c */
-LUAI_FUNC void luaU_print (const Proto* f, int full);
+LUAI_FUNC void luaU_print (lua_State* L, const Proto* f, int full);
 #endif
 
 /* for header of binary files -- this is Naga Lua 1.0 */

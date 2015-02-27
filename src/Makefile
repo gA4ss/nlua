@@ -31,7 +31,7 @@ LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 	lstrlib.o loadlib.o linit.o
 
 # nlua
-CORE_O+=  ndump.o nundump.o crc.o xor.o
+CORE_O+=  ndump.o nundump.o crc.o xor.o nopcodes.o nlua.o
 
 LUA_T=	lua
 LUA_O=	lua.o
@@ -65,7 +65,7 @@ clean:
 	$(RM) $(ALL_T) $(ALL_O)
 
 depend:
-	@$(CC) $(CFLAGS) -MM l*.c print.c
+	@$(CC) $(CFLAGS) -MM l*.c n*.c print.c crc.c xor.c
 
 echo:
 	@echo "PLAT = $(PLAT)"
@@ -185,9 +185,16 @@ print.o: print.c ldebug.h lstate.h lua.h luaconf.h lobject.h llimits.h \
 
 # nlua
 nundump.o: nundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
-  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h
+  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
+  nlua.h
 ndump.o: ndump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
-  lzio.h lmem.h nundump.h
+  lzio.h lmem.h nundump.h nlua.h
+nopcodes.o: nopcodes.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
+  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
+  nlua.h nopcodes.h lopcodes.h
+nlua.o: nlua.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
+  llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
+  nlua.h nopcodes.h lopcodes.h
 crc.o: crc.c crc.h
 xor.o: xor.c xor.h
 

@@ -8,7 +8,7 @@
 #define linit_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lualib.h"
 #include "lauxlib.h"

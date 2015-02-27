@@ -12,16 +12,7 @@
 #include <stdarg.h>
 #include <stddef.h>
 
-
 #include "luaconf.h"
-
-/*
- * Naga Lua的一些常量定义
- */
-#include "nlua.h"
-
-
-#ifndef use_nlua_info       /* 是否使用naga lua的描述信息 */
 
 #define LUA_VERSION         "Lua 5.1"
 #define LUA_RELEASE         "Lua 5.1.5"
@@ -32,20 +23,6 @@
 
 /* mark for precompiled code (`<esc>Lua') */
 #define	LUA_SIGNATURE       "\033Lua"
-
-#else
-
-#define LUA_VERSION         NLUA_VERSION
-#define LUA_RELEASE         NLUA_RELEASE
-#define LUA_VERSION_NUM     NLUA_VERSION_NUM
-#define LUA_COPYRIGHT       NLUA_COPYRIGHT
-#define LUA_AUTHORS         NLUA_AUTHORS
-
-
-/* mark for precompiled code (`<esc>Lua') */
-#define	LUA_SIGNATURE       NLUA_SIGNATURE
-
-#endif
 
 /* option for multiple returns in `lua_pcall' and `lua_call' */
 #define LUA_MULTRET	(-1)
@@ -326,7 +303,7 @@ LUA_API void lua_setlevel	(lua_State *from, lua_State *to);
 
 
 /*
-** Event codes
+** 事件代码
 */
 #define LUA_HOOKCALL	0
 #define LUA_HOOKRET	1
@@ -336,7 +313,7 @@ LUA_API void lua_setlevel	(lua_State *from, lua_State *to);
 
 
 /*
-** Event masks
+** 事件掩码
 */
 #define LUA_MASKCALL	(1 << LUA_HOOKCALL)
 #define LUA_MASKRET	(1 << LUA_HOOKRET)

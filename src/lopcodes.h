@@ -28,7 +28,7 @@
 ===========================================================================*/
 
 
-enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
+typedef enum {iABC, iABx, iAsBx} OpMode;  /* basic instruction format */
 
 
 /*
@@ -100,7 +100,8 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define GETARG_sBx(i)	(GETARG_Bx(i)-MAXARG_sBx)
 #define SETARG_sBx(i,b)	SETARG_Bx((i),cast(unsigned int, (b)+MAXARG_sBx))
 
-
+/* 复制到nopcodes.c中 */
+/*
 #define CREATE_ABC(o,a,b,c)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, b)<<POS_B) \
@@ -109,7 +110,7 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 #define CREATE_ABx(o,a,bc)	((cast(Instruction, o)<<POS_OP) \
 			| (cast(Instruction, a)<<POS_A) \
 			| (cast(Instruction, bc)<<POS_Bx))
-
+*/
 
 /*
 ** Macros to operate RK indices
@@ -142,75 +143,68 @@ enum OpMode {iABC, iABx, iAsBx};  /* basic instruction format */
 ** RK(x) == if ISK(x) then Kst(INDEXK(x)) else R(x)
 */
 
+/* OPCODE编码 */
+typedef lu_byte OpCode;
 
-/*
-** grep "ORDER OP" if you change these enums
-*/
-
-typedef enum {
 /*----------------------------------------------------------------------
 name		args	description
 ------------------------------------------------------------------------*/
-OP_MOVE,/*	A B	R(A) := R(B)					*/
-OP_LOADK,/*	A Bx	R(A) := Kst(Bx)					*/
-OP_LOADBOOL,/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
-OP_LOADNIL,/*	A B	R(A) := ... := R(B) := nil			*/
-OP_GETUPVAL,/*	A B	R(A) := UpValue[B]				*/
+LUAI_DATA OpCode OP_MOVE;/*	A B	R(A) := R(B)					*/
+LUAI_DATA OpCode OP_LOADK;/*	A Bx	R(A) := Kst(Bx)					*/
+LUAI_DATA OpCode OP_LOADBOOL;/*	A B C	R(A) := (Bool)B; if (C) pc++			*/
+LUAI_DATA OpCode OP_LOADNIL;/*	A B	R(A) := ... := R(B) := nil			*/
+LUAI_DATA OpCode OP_GETUPVAL;/*	A B	R(A) := UpValue[B]				*/
 
-OP_GETGLOBAL,/*	A Bx	R(A) := Gbl[Kst(Bx)]				*/
-OP_GETTABLE,/*	A B C	R(A) := R(B)[RK(C)]				*/
+LUAI_DATA OpCode OP_GETGLOBAL;/*	A Bx	R(A) := Gbl[Kst(Bx)]				*/
+LUAI_DATA OpCode OP_GETTABLE;/*	A B C	R(A) := R(B)[RK(C)]				*/
 
-OP_SETGLOBAL,/*	A Bx	Gbl[Kst(Bx)] := R(A)				*/
-OP_SETUPVAL,/*	A B	UpValue[B] := R(A)				*/
-OP_SETTABLE,/*	A B C	R(A)[RK(B)] := RK(C)				*/
+LUAI_DATA OpCode OP_SETGLOBAL;/*	A Bx	Gbl[Kst(Bx)] := R(A)				*/
+LUAI_DATA OpCode OP_SETUPVAL;/*	A B	UpValue[B] := R(A)				*/
+LUAI_DATA OpCode OP_SETTABLE;/*	A B C	R(A)[RK(B)] := RK(C)				*/
 
-OP_NEWTABLE,/*	A B C	R(A) := {} (size = B,C)				*/
+LUAI_DATA OpCode OP_NEWTABLE;/*	A B C	R(A) := {} (size = B,C)				*/
 
-OP_SELF,/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
+LUAI_DATA OpCode OP_SELF;/*	A B C	R(A+1) := R(B); R(A) := R(B)[RK(C)]		*/
 
-OP_ADD,/*	A B C	R(A) := RK(B) + RK(C)				*/
-OP_SUB,/*	A B C	R(A) := RK(B) - RK(C)				*/
-OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
-OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
-OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
-OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
-OP_UNM,/*	A B	R(A) := -R(B)					*/
-OP_NOT,/*	A B	R(A) := not R(B)				*/
-OP_LEN,/*	A B	R(A) := length of R(B)				*/
+LUAI_DATA OpCode OP_ADD;/*	A B C	R(A) := RK(B) + RK(C)				*/
+LUAI_DATA OpCode OP_SUB;/*	A B C	R(A) := RK(B) - RK(C)				*/
+LUAI_DATA OpCode OP_MUL;/*	A B C	R(A) := RK(B) * RK(C)				*/
+LUAI_DATA OpCode OP_DIV;/*	A B C	R(A) := RK(B) / RK(C)				*/
+LUAI_DATA OpCode OP_MOD;/*	A B C	R(A) := RK(B) % RK(C)				*/
+LUAI_DATA OpCode OP_POW;/*	A B C	R(A) := RK(B) ^ RK(C)				*/
+LUAI_DATA OpCode OP_UNM;/*	A B	R(A) := -R(B)					*/
+LUAI_DATA OpCode OP_NOT;/*	A B	R(A) := not R(B)				*/
+LUAI_DATA OpCode OP_LEN;/*	A B	R(A) := length of R(B)				*/
 
-OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
+LUAI_DATA OpCode OP_CONCAT;/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 
-OP_JMP,/*	sBx	pc+=sBx					*/
+LUAI_DATA OpCode OP_JMP;/*	sBx	pc+=sBx					*/
 
-OP_EQ,/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
-OP_LT,/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
-OP_LE,/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++  		*/
+LUAI_DATA OpCode OP_EQ;/*	A B C	if ((RK(B) == RK(C)) ~= A) then pc++		*/
+LUAI_DATA OpCode OP_LT;/*	A B C	if ((RK(B) <  RK(C)) ~= A) then pc++  		*/
+LUAI_DATA OpCode OP_LE;/*	A B C	if ((RK(B) <= RK(C)) ~= A) then pc++  		*/
 
-OP_TEST,/*	A C	if not (R(A) <=> C) then pc++			*/ 
-OP_TESTSET,/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/ 
+LUAI_DATA OpCode OP_TEST;/*	A C	if not (R(A) <=> C) then pc++			*/
+LUAI_DATA OpCode OP_TESTSET;/*	A B C	if (R(B) <=> C) then R(A) := R(B) else pc++	*/
 
-OP_CALL,/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
-OP_TAILCALL,/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
-OP_RETURN,/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
+LUAI_DATA OpCode OP_CALL;/*	A B C	R(A), ... ,R(A+C-2) := R(A)(R(A+1), ... ,R(A+B-1)) */
+LUAI_DATA OpCode OP_TAILCALL;/*	A B C	return R(A)(R(A+1), ... ,R(A+B-1))		*/
+LUAI_DATA OpCode OP_RETURN;/*	A B	return R(A), ... ,R(A+B-2)	(see note)	*/
 
-OP_FORLOOP,/*	A sBx	R(A)+=R(A+2);
-			if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
-OP_FORPREP,/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
+LUAI_DATA OpCode OP_FORLOOP;/*	A sBx	R(A)+=R(A+2);if R(A) <?= R(A+1) then { pc+=sBx; R(A+3)=R(A) }*/
+LUAI_DATA OpCode OP_FORPREP;/*	A sBx	R(A)-=R(A+2); pc+=sBx				*/
 
-OP_TFORLOOP,/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2)); 
-                        if R(A+3) ~= nil then R(A+2)=R(A+3) else pc++	*/ 
-OP_SETLIST,/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
+LUAI_DATA OpCode OP_TFORLOOP;/*	A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));
+                              if R(A+3) ~= nil then R(A+2)=R(A+3) else pc++	*/
+LUAI_DATA OpCode OP_SETLIST;/*	A B C	R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B	*/
 
-OP_CLOSE,/*	A 	close all variables in the stack up to (>=) R(A)*/
-OP_CLOSURE,/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
+LUAI_DATA OpCode OP_CLOSE;/*	A 	close all variables in the stack up to (>=) R(A)*/
+LUAI_DATA OpCode OP_CLOSURE;/*	A Bx	R(A) := closure(KPROTO[Bx], R(A), ... ,R(A+n))	*/
 
-OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
-} OpCode;
+LUAI_DATA OpCode OP_VARARG;/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
 
-
-#define NUM_OPCODES	(cast(int, OP_VARARG) + 1)
-
-
+/* OPCODE数量 */
+#define NUM_OPCODES   38
 
 /*===========================================================================
   Notes:
@@ -232,36 +226,36 @@ OP_VARARG/*	A B	R(A), R(A+1), ..., R(A+B-1) = vararg		*/
   (*) All `skips' (pc++) assume that next instruction is a jump
 ===========================================================================*/
 
+/* 编码参数掩码
+ * 0-1 op 模式
+ * 2-3 C 参数模式
+ * 4-5 B 参数模式
+ * 6 指令集合寄存器A
+ * 7 指令操作是一个测试(下一条指令必须是一个跳转)
+ */
+typedef enum {
+  OpArgN,  /* 参数无使用 */
+  OpArgU,  /* 参数被使用 */
+  OpArgR,  /* 参数是一个寄存器或者一个跳转偏移 */
+  OpArgK   /* 参数是一个常量或者寄存器/常量 */
+} OpArgMask;
 
-/*
-** masks for instruction properties. The format is:
-** bits 0-1: op mode
-** bits 2-3: C arg mode
-** bits 4-5: B arg mode
-** bit 6: instruction set register A
-** bit 7: operator is a test
-*/  
+/* 使用nlopcodes中的函数替代
+ #define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
+ #define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
+ #define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
+ #define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
+ #define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
+ */
 
-enum OpArgMask {
-  OpArgN,  /* argument is not used */
-  OpArgU,  /* argument is used */
-  OpArgR,  /* argument is a register or a jump offset */
-  OpArgK   /* argument is a constant or register/constant */
-};
+/* 指令操作模式类型 */
+typedef lu_byte OpRun;
+LUAI_DATA const OpRun luaP_opmodes[NUM_OPCODES];
 
-LUAI_DATA const lu_byte luaP_opmodes[NUM_OPCODES];
+/* OpCode名称表 */
+LUAI_DATA const char *const luaP_opnames[NUM_OPCODES+1];
 
-#define getOpMode(m)	(cast(enum OpMode, luaP_opmodes[m] & 3))
-#define getBMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 4) & 3))
-#define getCMode(m)	(cast(enum OpArgMask, (luaP_opmodes[m] >> 2) & 3))
-#define testAMode(m)	(luaP_opmodes[m] & (1 << 6))
-#define testTMode(m)	(luaP_opmodes[m] & (1 << 7))
-
-
-LUAI_DATA const char *const luaP_opnames[NUM_OPCODES+1];  /* opcode names */
-
-
-/* number of list items to accumulate before a SETLIST instruction */
+/* SETLIST指令之前的积累的项数 */
 #define LFIELDS_PER_FLUSH	50
 
 

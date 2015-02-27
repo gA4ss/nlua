@@ -4,16 +4,17 @@
 ** See Copyright Notice in lua.h
 */
 
+/* 只要在头文件中包含nlua.h即是内部头文件 */
+
 #ifndef lstate_h
 #define lstate_h
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lobject.h"
 #include "ltm.h"
 #include "lzio.h"
-
-
+#include "lopcodes.h"
 
 struct lua_longjmp;  /* defined in ldo.c */
 
@@ -41,7 +42,7 @@ typedef struct stringtable {
 
 
 /*
-** informations about a call
+** 调用信息结构
 */
 typedef struct CallInfo {
   StkId base;  /* base for this function */
@@ -52,82 +53,130 @@ typedef struct CallInfo {
   int tailcalls;  /* number of tail calls lost under this entry */
 } CallInfo;
 
-
-
 #define curr_func(L)	(clvalue(L->ci->func))
-#define ci_func(ci)	(clvalue((ci)->func))
-#define f_isLua(ci)	(!ci_func(ci)->c.isC)
-#define isLua(ci)	(ttisfunction((ci)->func) && f_isLua(ci))
+#define ci_func(ci)   (clvalue((ci)->func))
+#define f_isLua(ci)   (!ci_func(ci)->c.isC)
+#define isLua(ci)     (ttisfunction((ci)->func) && f_isLua(ci))
 
+/* 指令处理之前统一调用的函数原型 */
+typedef int (*nluaV_InstructionStart) (lua_State* L, Instruction *pins);
+/* 指令处理返回前调用的函数原型 */
+typedef int (*nluaV_InstructionEnd) (lua_State* L, Instruction *pins);
+/* 加密指令 */
+typedef int (*nluaV_EnInstruction) (lua_State* L, Instruction *pins);
+/* 解密指令 */
+typedef int (*nluaV_DeInstruction) (lua_State* L, Instruction *pins);
+/* 加密指令数据 */
+typedef int (*nluaV_EnInstructionData) (lua_State* L, Instruction *pins);
+/* 解密指令数据 */
+typedef int (*nluaV_DeInstructionData) (lua_State* L, Instruction *pins);
+/* 加密缓存 */
+typedef int (*nluaV_EnBuffer) (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
+/* 解密缓存 */
+typedef int (*nluaV_DeBuffer) (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
+/* 制作文件形式的密钥 */
+typedef lu_int32 (*nluaV_MakeFileKey) (lua_State* L, const char *path);
+/* 指令处理原型 */
+typedef int (*nluaV_Instruction) (lua_State* L, Instruction ins, StkId* base, LClosure* cl,
+  const Instruction** pc, int* pnexeccalls);
 
+/* 指令编码结构 */
+typedef struct OPCODE_RULE {
+  OpCode optab[NUM_OPCODES];                  /* opcode编码表 */
+  OpRun opmods[NUM_OPCODES];                  /* opcode模式表 */
+  nluaV_Instruction opcodedisp[NUM_OPCODES];  /* opcode分派函数 */
+  
+#if defined(nluac_c)
+  const char* opnames[NUM_OPCODES+1];         /* opcode名称表 */
+#endif
+} OPR;
+
+#define MAX_KEY_PATH              128
 /* `全局状态`,所有的线程共享这个状态 */
 typedef struct global_State {
-  stringtable strt;  /* hash table for strings */
-  lua_Alloc frealloc;  /* function to reallocate memory */
-  void *ud;         /* auxiliary data to `frealloc' */
+  stringtable strt;                 /* 字符串哈希表 */
+  lua_Alloc frealloc;               /* 分配内存函数指针 */
+  void *ud;                         /* `frealloc'的辅助数据 */
   lu_byte currentwhite;
-  lu_byte gcstate;  /* state of garbage collector */
-  int sweepstrgc;  /* position of sweep in `strt' */
-  GCObject *rootgc;  /* list of all collectable objects */
-  GCObject **sweepgc;  /* position of sweep in `rootgc' */
-  GCObject *gray;  /* list of gray objects */
-  GCObject *grayagain;  /* list of objects to be traversed atomically */
-  GCObject *weak;  /* list of weak tables (to be cleared) */
-  GCObject *tmudata;  /* last element of list of userdata to be GC */
-  Mbuffer buff;  /* temporary buffer for string concatentation */
+  lu_byte gcstate;                  /* 垃圾回收状态 */
+  int sweepstrgc;                   /* position of sweep in `strt' */
+  GCObject *rootgc;                 /* 所有可回收内存对象列表 */
+  GCObject **sweepgc;               /* position of sweep in `rootgc' */
+  GCObject *gray;                   /* list of gray objects */
+  GCObject *grayagain;              /* list of objects to be traversed atomically */
+  GCObject *weak;                   /* list of weak tables (to be cleared) */
+  GCObject *tmudata;                /* last element of list of userdata to be GC */
+  Mbuffer buff;                     /* temporary buffer for string concatentation */
   lu_mem GCthreshold;
-  lu_mem totalbytes;  /* number of bytes currently allocated */
-  lu_mem estimate;  /* an estimate of number of bytes actually in use */
-  lu_mem gcdept;  /* how much GC is `behind schedule' */
-  int gcpause;  /* size of pause between successive GCs */
-  int gcstepmul;  /* GC `granularity' */
-  lua_CFunction panic;  /* to be called in unprotected errors */
+  lu_mem totalbytes;                /* 总共分配了多少个字节 */
+  lu_mem estimate;                  /* an estimate of number of bytes actually in use */
+  lu_mem gcdept;                    /* how much GC is `behind schedule' */
+  int gcpause;                      /* size of pause between successive GCs */
+  int gcstepmul;                    /* GC `granularity' */
+  lua_CFunction panic;              /* 当没有处理的错误发生时，调用此函数 */
   TValue l_registry;
   struct lua_State *mainthread;
-  UpVal uvhead;  /* head of double-linked list of all open upvalues */
-  struct Table *mt[NUM_TAGS];  /* metatables for basic types */
-  TString *tmname[TM_N];  /* array with tag-method names */
+  UpVal uvhead;                     /* 一个双向的upvalue值的链表 */
+  struct Table *mt[NUM_TAGS];       /* 元操作表 */
+  TString *tmname[TM_N];            /* 元操作名称表 */
+  
+  /* nlua
+   */
+  int is_nlua;                      /* 是nlua的文件格式 */
+  OPR oprule;                       /* opcode编码规则 */
+  unsigned int nopt;                /* nlua的安全选项 */
+  union {
+    char fkeyp[MAX_KEY_PATH];       /* 文件key的路径 */
+    unsigned int ekey;              /* 解密所需的密码 */
+  };
+  
+  /* 指令调用前后要执行的函数 */
+  nluaV_InstructionStart istart;
+  nluaV_InstructionEnd iend;
+  nluaV_EnInstructionData ienidata;
+  nluaV_DeInstructionData ideidata;
+  nluaV_EnInstruction ienins;
+  nluaV_DeInstruction ideins;
+  nluaV_EnBuffer enbuf;
+  nluaV_DeBuffer debuf;
+  nluaV_MakeFileKey fkmake;
+  
 } global_State;
 
-
-/*
-** `per thread' state
-*/
+/* 独立线程状态，每条线程私有*/
 struct lua_State {
   CommonHeader;
   lu_byte status;
-  StkId top;  /* first free slot in the stack */
-  StkId base;  /* base of current function */
-  /* 全局状态 */
-  global_State *l_G;
-  CallInfo *ci;  /* call info for current function */
-  const Instruction *savedpc;  /* `savedpc' of current function */
-  StkId stack_last;  /* last free slot in the stack */
-  StkId stack;  /* stack base */
-  CallInfo *end_ci;  /* points after end of ci array*/
-  CallInfo *base_ci;  /* array of CallInfo's */
+  StkId top;                          /* 栈顶，在栈上第一个空闲的位置 */
+  StkId base;                         /* 当前函数的栈基 */
+  global_State *l_G;                  /* 全局状态 */
+  CallInfo *ci;                       /* 当前函数的调用信息 */
+  const Instruction *savedpc;         /* 当前函数的`savedpc' */
+  StkId stack_last;                   /* 栈末尾，在栈上最后空闲的位置 */
+  StkId stack;                        /* 栈的起始 */
+  CallInfo *end_ci;                   /* 指向CallInfo队列的末尾指针 */
+  CallInfo *base_ci;                  /* CallInfo队列 */
   int stacksize;
-  int size_ci;  /* size of array `base_ci' */
-  unsigned short nCcalls;  /* number of nested C calls */
-  unsigned short baseCcalls;  /* nested C calls when resuming coroutine */
+  int size_ci;                        /* `base_ci'队列的长度 */
+  unsigned short nCcalls;             /* number of nested C calls */
+  unsigned short baseCcalls;          /* nested C calls when resuming coroutine */
   lu_byte hookmask;
   lu_byte allowhook;
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TValue l_gt;  /* table of globals */
-  TValue env;  /* temporary place for environments */
-  GCObject *openupval;  /* list of open upvalues in this stack */
+  TValue l_gt;                        /* table of globals */
+  TValue env;                         /* temporary place for environments */
+  GCObject *openupval;                /* list of open upvalues in this stack */
   GCObject *gclist;
-  struct lua_longjmp *errorJmp;  /* current error recover point */
-  ptrdiff_t errfunc;  /* current error handling function (stack index) */
+  struct lua_longjmp *errorJmp;       /* 当前错误恢复点 */
+  ptrdiff_t errfunc;                  /* 当前的错误处理句柄 (栈索引) */
 };
 
 /* 从本地线程状态返回全局状态 */
 #define G(L)	(L->l_G)
 
-/* 
- * 所有可回收内存对象的联合体 
+/* 所有可回收内存对象的联合体
  */
 union GCObject {
   GCheader gch;
@@ -140,8 +189,7 @@ union GCObject {
   struct lua_State th;  /* thread */
 };
 
-
-/* macros to convert a GCObject into a specific value */
+/* 一些宏操作:转换 GCObject 为指定的值 */
 #define rawgco2ts(o)	check_exp((o)->gch.tt == LUA_TSTRING, &((o)->ts))
 #define gco2ts(o)	(&rawgco2ts(o)->tsv)
 #define rawgco2u(o)	check_exp((o)->gch.tt == LUA_TUSERDATA, &((o)->u))
@@ -160,6 +208,12 @@ union GCObject {
 
 LUAI_FUNC lua_State *luaE_newthread (lua_State *L);
 LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
+
+/*
+ * nlua
+ */
+LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt);
+LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua);
 
 #endif
 

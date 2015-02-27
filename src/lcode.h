@@ -20,9 +20,7 @@
 #define NO_JUMP (-1)
 
 
-/*
-** grep "ORDER OPR" if you change these enums
-*/
+/* 二元操作符号 */
 typedef enum BinOpr {
   OPR_ADD, OPR_SUB, OPR_MUL, OPR_DIV, OPR_MOD, OPR_POW,
   OPR_CONCAT,
@@ -32,9 +30,8 @@ typedef enum BinOpr {
   OPR_NOBINOPR
 } BinOpr;
 
-
+/* 一元操作符号 */
 typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
-
 
 #define getcode(fs,e)	((fs)->f->code[(e)->u.s.info])
 

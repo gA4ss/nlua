@@ -14,7 +14,7 @@
 #define lbaselib_c
 #define LUA_LIB
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lauxlib.h"
 #include "lualib.h"

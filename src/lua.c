@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-//#define nlua_vm
+#define nlua_vm
 #ifdef nlua_vm
 
 #include <signal.h>
@@ -14,17 +14,15 @@
 
 #define lua_c
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lauxlib.h"
 #include "lualib.h"
 
 
-
 static lua_State *globalL = NULL;
 
 static const char *progname = LUA_PROGNAME;
-
 
 
 static void lstop (lua_State *L, lua_Debug *ar) {

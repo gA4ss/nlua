@@ -13,7 +13,8 @@
 
 #define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
 
-#define getline(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
+/* 返回pc对应的源代码行号 */
+#define getlinenm(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
 
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 
@@ -27,7 +28,7 @@ LUAI_FUNC int luaG_ordererror (lua_State *L, const TValue *p1,
                                              const TValue *p2);
 LUAI_FUNC void luaG_runerror (lua_State *L, const char *fmt, ...);
 LUAI_FUNC void luaG_errormsg (lua_State *L);
-LUAI_FUNC int luaG_checkcode (const Proto *pt);
+LUAI_FUNC int luaG_checkcode (lua_State *L, const Proto *pt);
 LUAI_FUNC int luaG_checkopenop (Instruction i);
 
 #endif

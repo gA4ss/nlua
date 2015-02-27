@@ -10,7 +10,7 @@
 #define lcode_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lcode.h"
 #include "ldebug.h"
@@ -22,6 +22,7 @@
 #include "lopcodes.h"
 #include "lparser.h"
 #include "ltable.h"
+#include "nopcodes.h"
 
 
 #define hasjumps(e)	((e)->t != (e)->f)
@@ -108,7 +109,7 @@ static int getjump (FuncState *fs, int pc) {
 
 static Instruction *getjumpcontrol (FuncState *fs, int pc) {
   Instruction *pi = &fs->f->code[pc];
-  if (pc >= 1 && testTMode(GET_OPCODE(*(pi-1))))
+  if (pc >= 1 && nluaP_testtmode(fs->L, GET_OPCODE(*(pi-1))))
     return pi-1;
   else
     return pi;
@@ -127,15 +128,17 @@ static int need_value (FuncState *fs, int list) {
   return 0;  /* not found */
 }
 
-
+/* 对测试寄存器指令进行修复 */
 static int patchtestreg (FuncState *fs, int node, int reg) {
   Instruction *i = getjumpcontrol(fs, node);
   if (GET_OPCODE(*i) != OP_TESTSET)
     return 0;  /* cannot patch other instructions */
   if (reg != NO_REG && reg != GETARG_B(*i))
     SETARG_A(*i, reg);
-  else  /* no register to put value or register already has the value */
-    *i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+  else { /* no register to put value or register already has the value */
+    //*i = CREATE_ABC(OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+    *i = nluaP_createABC(fs->L, OP_TEST, GETARG_B(*i), 0, GETARG_C(*i));
+  }
 
   return 1;
 }
@@ -623,28 +626,40 @@ void luaK_indexed (FuncState *fs, expdesc *t, expdesc *k) {
   t->k = VINDEXED;
 }
 
-
+/* 合并表达式的值
+ * op 操作码
+ * e1 表达式1的指针
+ * e2 表达式2的指针
+ */
 static int constfolding (OpCode op, expdesc *e1, expdesc *e2) {
   lua_Number v1, v2, r;
   if (!isnumeral(e1) || !isnumeral(e2)) return 0;
   v1 = e1->u.nval;
   v2 = e2->u.nval;
-  switch (op) {
-    case OP_ADD: r = luai_numadd(v1, v2); break;
-    case OP_SUB: r = luai_numsub(v1, v2); break;
-    case OP_MUL: r = luai_nummul(v1, v2); break;
-    case OP_DIV:
-      if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
-      r = luai_numdiv(v1, v2); break;
-    case OP_MOD:
-      if (v2 == 0) return 0;  /* do not attempt to divide by 0 */
-      r = luai_nummod(v1, v2); break;
-    case OP_POW: r = luai_numpow(v1, v2); break;
-    case OP_UNM: r = luai_numunm(v1); break;
-    case OP_LEN: return 0;  /* no constant folding for 'len' */
-    default: lua_assert(0); r = 0; break;
+    
+  if (op==OP_ADD) {
+    r = luai_numadd(v1, v2);
+  } else if (op==OP_SUB) {
+    r = luai_numsub(v1, v2);
+  } else if (op==OP_MUL) {
+    r = luai_nummul(v1, v2);
+  } else if (op==OP_DIV) {
+    if (v2 == 0) return 0;      /* 除数不能为0 */
+    r = luai_numdiv(v1, v2);
+  } else if (op==OP_MOD) {
+    if (v2 == 0) return 0;      /* 除数不能为0 */
+    r = luai_nummod(v1, v2);
+  } else if (op==OP_POW) {
+    r = luai_numpow(v1, v2);
+  } else if (op==OP_UNM) {
+    r = luai_numunm(v1);
+  } else if (op==OP_LEN) {
+    return 0;                   /* 常数没有len操作 */
+  } else {
+    lua_assert(0); r = 0;
   }
-  if (luai_numisnan(r)) return 0;  /* do not attempt to produce NaN */
+  
+  if (luai_numisnan(r)) return 0;  /* 计算结果不能为 NaN */
   e1->u.nval = r;
   return 1;
 }
@@ -688,7 +703,7 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
     case OPR_MINUS: {
       if (!isnumeral(e))
@@ -800,21 +815,21 @@ static int luaK_code (FuncState *fs, Instruction i, int line) {
   return fs->pc++;
 }
 
-
 int luaK_codeABC (FuncState *fs, OpCode o, int a, int b, int c) {
-  lua_assert(getOpMode(o) == iABC);
-  lua_assert(getBMode(o) != OpArgN || b == 0);
-  lua_assert(getCMode(o) != OpArgN || c == 0);
-  return luaK_code(fs, CREATE_ABC(o, a, b, c), fs->ls->lastline);
+  lua_assert(nluaP_getopmode(fs->L,o) == iABC);
+  lua_assert(nluaP_getbmode(fs->L,o) != OpArgN || b == 0);
+  lua_assert(nluaP_getcmode(fs->L,o) != OpArgN || c == 0);
+  //return luaK_code(fs, CREATE_ABC(o, a, b, c), fs->ls->lastline);
+  return luaK_code(fs, nluaP_createABC(fs->L, o, a, b, c), fs->ls->lastline);
 }
 
 
 int luaK_codeABx (FuncState *fs, OpCode o, int a, unsigned int bc) {
-  lua_assert(getOpMode(o) == iABx || getOpMode(o) == iAsBx);
-  lua_assert(getCMode(o) == OpArgN);
-  return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
+  lua_assert(nluaP_getopmode(fs->L,o) == iABx || nluaP_getopmode(fs->L,o) == iAsBx);
+  lua_assert(nluaP_getcmode(fs->L,o) == OpArgN);
+  //return luaK_code(fs, CREATE_ABx(o, a, bc), fs->ls->lastline);
+  return luaK_code(fs, nluaP_createABx(fs->L, o, a, bc), fs->ls->lastline);
 }
-
 
 void luaK_setlist (FuncState *fs, int base, int nelems, int tostore) {
   int c =  (nelems - 1)/LFIELDS_PER_FLUSH + 1;

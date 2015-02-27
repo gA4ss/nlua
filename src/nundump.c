@@ -5,7 +5,7 @@
 #define nundump_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "ldebug.h"
 #include "ldo.h"
@@ -205,7 +205,7 @@ static Proto* LoadFunction(LoadState* S, TString* p) {
   LoadDebug(S,f);                         /* 读取调试信息 */
   
   /* 如果出错则退出 */
-  IF (!luaG_checkcode(f), "bad code");
+  IF (!luaG_checkcode(S->L, f), "bad code");
   
   /* 栈的恢复 */
   S->L->top--;

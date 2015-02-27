@@ -12,7 +12,7 @@
 #define ldo_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "ldebug.h"
 #include "ldo.h"

@@ -12,12 +12,12 @@
 #include "lobject.h"
 #include "ltm.h"
 
-
+/* 转换对象到字符串类型 */
 #define tostring(L,o) ((ttype(o) == LUA_TSTRING) || (luaV_tostring(L, o)))
-
+/* 转换对象到数字类型 */
 #define tonumber(o,n)	(ttype(o) == LUA_TNUMBER || \
                          (((o) = luaV_tonumber(o,n)) != NULL))
-
+/* 判断两个对象是否相等 */
 #define equalobj(L,o1,o2) \
 	(ttype(o1) == ttype(o2) && luaV_equalval(L, o1, o2))
 

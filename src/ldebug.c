@@ -13,7 +13,7 @@
 #define ldebug_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lapi.h"
 #include "lcode.h"
@@ -27,7 +27,7 @@
 #include "ltable.h"
 #include "ltm.h"
 #include "lvm.h"
-
+#include "nopcodes.h"
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name);
@@ -46,7 +46,7 @@ static int currentline (lua_State *L, CallInfo *ci) {
   if (pc < 0)
     return -1;  /* only active lua functions have current-line information */
   else
-    return getline(ci_func(ci)->l.p, pc);
+    return getlinenm(ci_func(ci)->l.p, pc);
 }
 
 
@@ -288,20 +288,17 @@ static int precheck (const Proto *pt) {
 #define checkopenop(pt,pc)	luaG_checkopenop((pt)->code[(pc)+1])
 
 int luaG_checkopenop (Instruction i) {
-  switch (GET_OPCODE(i)) {
-    case OP_CALL:
-    case OP_TAILCALL:
-    case OP_RETURN:
-    case OP_SETLIST: {
-      check(GETARG_B(i) == 0);
-      return 1;
-    }
-    default: return 0;  /* invalid instruction after an open call */
+  OpCode o = GET_OPCODE(i);
+  if ((o==OP_CALL) || (o==OP_TAILCALL) ||
+      (o==OP_RETURN) || (o==OP_SETLIST)) {
+    check(GETARG_B(i) == 0);
+    return 1;
   }
+  
+  return 0; /* 在打开call后的无效指令 */
 }
 
-
-static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
+static int checkArgMode (const Proto *pt, int r, OpArgMask mode) {
   switch (mode) {
     case OpArgN: check(r == 0); break;
     case OpArgU: break;
@@ -314,35 +311,37 @@ static int checkArgMode (const Proto *pt, int r, enum OpArgMask mode) {
 }
 
 
-static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
+static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg) {
   int pc;
-  int last;  /* stores position of last instruction that changed `reg' */
-  last = pt->sizecode-1;  /* points to final return (a `neutral' instruction) */
+  int last;                 /* stores position of last instruction that changed `reg' */
+  last = pt->sizecode-1;    /* points to final return (a `neutral' instruction) */
   check(precheck(pt));
+  
+  /* 遍历指令 */
   for (pc = 0; pc < lastpc; pc++) {
-    Instruction i = pt->code[pc];
+    Instruction i = pt->code[pc];             /* 取出指令 */
     OpCode op = GET_OPCODE(i);
     int a = GETARG_A(i);
     int b = 0;
     int c = 0;
     check(op < NUM_OPCODES);
     checkreg(pt, a);
-    switch (getOpMode(op)) {
+    switch (nluaP_getopmode(L, op)) {
       case iABC: {
         b = GETARG_B(i);
         c = GETARG_C(i);
-        check(checkArgMode(pt, b, getBMode(op)));
-        check(checkArgMode(pt, c, getCMode(op)));
+        check(checkArgMode(pt, b, nluaP_getbmode(L, op)));
+        check(checkArgMode(pt, c, nluaP_getcmode(L, op)));
         break;
       }
       case iABx: {
         b = GETARG_Bx(i);
-        if (getBMode(op) == OpArgK) check(b < pt->sizek);
+        if (nluaP_getbmode(L,op) == OpArgK) check(b < pt->sizek);
         break;
       }
       case iAsBx: {
         b = GETARG_sBx(i);
-        if (getBMode(op) == OpArgR) {
+        if (nluaP_getbmode(L,op) == OpArgR) {
           int dest = pc+1+b;
           check(0 <= dest && dest < pt->sizecode);
           if (dest > 0) {
@@ -362,115 +361,91 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
         }
         break;
       }
+    }/* end switch */
+    
+    if (nluaP_testamode(L,op)) {
+      if (a == reg) last = pc;     /* change register `a' */
     }
-    if (testAMode(op)) {
-      if (a == reg) last = pc;  /* change register `a' */
-    }
-    if (testTMode(op)) {
+    if (nluaP_testtmode(L,op)) {
       check(pc+2 < pt->sizecode);  /* check skip */
       check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
     }
-    switch (op) {
-      case OP_LOADBOOL: {
-        if (c == 1) {  /* does it jump? */
-          check(pc+2 < pt->sizecode);  /* check its jump */
-          check(GET_OPCODE(pt->code[pc+1]) != OP_SETLIST ||
-                GETARG_C(pt->code[pc+1]) != 0);
-        }
-        break;
+    
+    if (op==OP_LOADBOOL) {
+      if (c == 1) {  /* does it jump? */
+        check(pc+2 < pt->sizecode);  /* check its jump */
+        check(GET_OPCODE(pt->code[pc+1]) != OP_SETLIST ||
+              GETARG_C(pt->code[pc+1]) != 0);
       }
-      case OP_LOADNIL: {
-        if (a <= reg && reg <= b)
-          last = pc;  /* set registers from `a' to `b' */
-        break;
-      }
-      case OP_GETUPVAL:
-      case OP_SETUPVAL: {
-        check(b < pt->nups);
-        break;
-      }
-      case OP_GETGLOBAL:
-      case OP_SETGLOBAL: {
-        check(ttisstring(&pt->k[b]));
-        break;
-      }
-      case OP_SELF: {
-        checkreg(pt, a+1);
-        if (reg == a+1) last = pc;
-        break;
-      }
-      case OP_CONCAT: {
-        check(b < c);  /* at least two operands */
-        break;
-      }
-      case OP_TFORLOOP: {
-        check(c >= 1);  /* at least one result (control variable) */
-        checkreg(pt, a+2+c);  /* space for results */
-        if (reg >= a+2) last = pc;  /* affect all regs above its base */
-        break;
-      }
-      case OP_FORLOOP:
-      case OP_FORPREP:
+    } else if (op==OP_LOADNIL) {
+      if (a <= reg && reg <= b)
+        last = pc;  /* set registers from `a' to `b' */
+    } else if ((op==OP_GETUPVAL) || (op==OP_SETUPVAL)) {
+      check(b < pt->nups);
+    } else if ((op==OP_GETGLOBAL) || (op==OP_SETGLOBAL)) {
+      check(ttisstring(&pt->k[b]));
+    } else if (op==OP_SELF) {
+      checkreg(pt, a+1);
+      if (reg == a+1) last = pc;
+    } else if (op==OP_CONCAT) {
+      check(b < c);  /* at least two operands */
+    } else if (op==OP_TFORLOOP) {
+      check(c >= 1);  /* at least one result (control variable) */
+      checkreg(pt, a+2+c);  /* space for results */
+      if (reg >= a+2) last = pc;  /* affect all regs above its base */
+    } else if ((op==OP_FORLOOP) || (op==OP_FORPREP) || (op==OP_JMP)) {
+      int dest;
+      
+      if ((op==OP_FORLOOP) || (op==OP_FORPREP)) {
         checkreg(pt, a+3);
-        /* go through */
-      case OP_JMP: {
-        int dest = pc+1+b;
-        /* not full check and jump is forward and do not skip `lastpc'? */
-        if (reg != NO_REG && pc < dest && dest <= lastpc)
-          pc += b;  /* do the jump */
-        break;
       }
-      case OP_CALL:
-      case OP_TAILCALL: {
-        if (b != 0) {
-          checkreg(pt, a+b-1);
-        }
-        c--;  /* c = num. returns */
-        if (c == LUA_MULTRET) {
-          check(checkopenop(pt, pc));
-        }
-        else if (c != 0)
-          checkreg(pt, a+c-1);
-        if (reg >= a) last = pc;  /* affect all registers above base */
-        break;
-      }
-      case OP_RETURN: {
-        b--;  /* b = num. returns */
-        if (b > 0) checkreg(pt, a+b-1);
-        break;
-      }
-      case OP_SETLIST: {
-        if (b > 0) checkreg(pt, a + b);
-        if (c == 0) {
-          pc++;
-          check(pc < pt->sizecode - 1);
-        }
-        break;
-      }
-      case OP_CLOSURE: {
-        int nup, j;
-        check(b < pt->sizep);
-        nup = pt->p[b]->nups;
-        check(pc + nup < pt->sizecode);
-        for (j = 1; j <= nup; j++) {
-          OpCode op1 = GET_OPCODE(pt->code[pc + j]);
-          check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
-        }
-        if (reg != NO_REG)  /* tracing? */
-          pc += nup;  /* do not 'execute' these pseudo-instructions */
-        break;
-      }
-      case OP_VARARG: {
-        check((pt->is_vararg & VARARG_ISVARARG) &&
-             !(pt->is_vararg & VARARG_NEEDSARG));
-        b--;
-        if (b == LUA_MULTRET) check(checkopenop(pt, pc));
+      
+      /* 
+       * OP_JMP直接到这里
+       */
+      dest = pc+1+b;
+      /* not full check and jump is forward and do not skip `lastpc'? */
+      if (reg != NO_REG && pc < dest && dest <= lastpc)
+        pc += b;  /* do the jump */
+    } else if ((op==OP_CALL) || (op==OP_TAILCALL)) {
+      if (b != 0) {
         checkreg(pt, a+b-1);
-        break;
       }
-      default: break;
-    }
-  }
+      c--;  /* c = num. returns */
+      if (c == LUA_MULTRET) {
+        check(checkopenop(pt, pc));
+      }
+      else if (c != 0)
+        checkreg(pt, a+c-1);
+      if (reg >= a) last = pc;  /* affect all registers above base */
+    } else if (op==OP_RETURN) {
+      b--;  /* b = num. returns */
+      if (b > 0) checkreg(pt, a+b-1);
+    } else if (op==OP_SETLIST) {
+      if (b > 0) checkreg(pt, a + b);
+      if (c == 0) {
+        pc++;
+        check(pc < pt->sizecode - 1);
+      }
+    } else if (op==OP_CLOSURE) {
+      int nup, j;
+      check(b < pt->sizep);
+      nup = pt->p[b]->nups;
+      check(pc + nup < pt->sizecode);
+      for (j = 1; j <= nup; j++) {
+        OpCode op1 = GET_OPCODE(pt->code[pc + j]);
+        check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
+      }
+      if (reg != NO_REG)  /* tracing? */
+        pc += nup;  /* do not 'execute' these pseudo-instructions */
+    } else if (op==OP_VARARG) {
+      check((pt->is_vararg & VARARG_ISVARARG) &&
+            !(pt->is_vararg & VARARG_NEEDSARG));
+      b--;
+      if (b == LUA_MULTRET) check(checkopenop(pt, pc));
+      checkreg(pt, a+b-1);
+    }/* end if */
+  }/* end for */
   return pt->code[last];
 }
 
@@ -481,8 +456,8 @@ static Instruction symbexec (const Proto *pt, int lastpc, int reg) {
 /* }====================================================== */
 
 
-int luaG_checkcode (const Proto *pt) {
-  return (symbexec(pt, pt->sizecode, NO_REG) != 0);
+int luaG_checkcode (lua_State *L, const Proto *pt) {
+  return (symbexec(L, pt, pt->sizecode, NO_REG) != 0);
 }
 
 
@@ -493,48 +468,43 @@ static const char *kname (Proto *p, int c) {
     return "?";
 }
 
-
+/* 获取对象名称 */
 static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
                                const char **name) {
   if (isLua(ci)) {  /* a Lua function? */
     Proto *p = ci_func(ci)->l.p;
     int pc = currentpc(L, ci);
     Instruction i;
+    OpCode o;
     *name = luaF_getlocalname(p, stackpos+1, pc);
     if (*name)  /* is a local? */
       return "local";
-    i = symbexec(p, pc, stackpos);  /* try symbolic execution */
+    i = symbexec(L, p, pc, stackpos);  /* try symbolic execution */
     lua_assert(pc != -1);
-    switch (GET_OPCODE(i)) {
-      case OP_GETGLOBAL: {
-        int g = GETARG_Bx(i);  /* global index */
-        lua_assert(ttisstring(&p->k[g]));
-        *name = svalue(&p->k[g]);
-        return "global";
-      }
-      case OP_MOVE: {
-        int a = GETARG_A(i);
-        int b = GETARG_B(i);  /* move from `b' to `a' */
-        if (b < a)
-          return getobjname(L, ci, b, name);  /* get name for `b' */
-        break;
-      }
-      case OP_GETTABLE: {
-        int k = GETARG_C(i);  /* key index */
-        *name = kname(p, k);
-        return "field";
-      }
-      case OP_GETUPVAL: {
-        int u = GETARG_B(i);  /* upvalue index */
-        *name = p->upvalues ? getstr(p->upvalues[u]) : "?";
-        return "upvalue";
-      }
-      case OP_SELF: {
-        int k = GETARG_C(i);  /* key index */
-        *name = kname(p, k);
-        return "method";
-      }
-      default: break;
+    o=GET_OPCODE(i);
+    
+    if (o==OP_GETGLOBAL) {
+      int g = GETARG_Bx(i);  /* global index */
+      lua_assert(ttisstring(&p->k[g]));
+      *name = svalue(&p->k[g]);
+      return "global";
+    } else if (o==OP_MOVE) {
+      int a = GETARG_A(i);
+      int b = GETARG_B(i);  /* move from `b' to `a' */
+      if (b < a)
+        return getobjname(L, ci, b, name);  /* get name for `b' */
+    } else if (o==OP_GETTABLE) {
+      int k = GETARG_C(i);  /* key index */
+      *name = kname(p, k);
+      return "field";
+    } else if (o==OP_GETUPVAL) {
+      int u = GETARG_B(i);  /* upvalue index */
+      *name = p->upvalues ? getstr(p->upvalues[u]) : "?";
+      return "upvalue";
+    } else if (o==OP_SELF) {
+      int k = GETARG_C(i);  /* key index */
+      *name = kname(p, k);
+      return "method";
     }
   }
   return NULL;  /* no useful name found */

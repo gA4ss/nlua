@@ -59,7 +59,7 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Users/devilogic/workspace/test.dump"
+            argument = "/Users/devilogic/workspace/love.lua"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

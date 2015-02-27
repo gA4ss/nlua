@@ -13,7 +13,7 @@
 #define lapi_c
 #define LUA_CORE
 
-#include "lua.h"
+#include "nlua.h"
 
 #include "lapi.h"
 #include "ldebug.h"
