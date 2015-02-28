@@ -26,6 +26,7 @@
 #include "ltm.h"
 #include "lvm.h"
 #include "nopcodes.h"
+#include "nundump.h"
 
 
 
@@ -358,7 +359,7 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 /* 执行跳转指令,pc:当前地址，i:要跳转的偏移 */
 #define dojump(L,pc,i)	{(pc) += (i); luai_threadyield(L);}
 /* 保护执行 */
-#define Protect(x)	{ L->savedpc = (**pc); {x;}; (*base) = L->base; }
+#define Protect(x)	{ L->savedpc = (*pc); {x;}; (*base) = L->base; }
 
 /* 算数指令 */
 #define arith_op(op,tm) { \
@@ -372,7 +373,7 @@ static void Arith (lua_State *L, StkId ra, const TValue *rb,
 
 /* 调用执行前后指令 */
 #define do_op_start(ins) nret = G((L))->istart((L), &(ins));
-#define do_op_end(ins) nret = G((L))->iend((L), &(ins));
+#define do_op_end(ins,r) nret = G((L))->iend((L), &(ins)); return (r);
 
 /* Opcode分派函数的返回值 */
 typedef enum {
@@ -392,20 +393,38 @@ typedef enum {
   lua_assert((*base) <= L->top && L->top <= L->stack + L->stacksize); \
   lua_assert(L->top == L->ci->top || luaG_checkopenop(ins));
 
+/* 读取pc值的内容 */
+static Instruction readpc(lua_State*L, Instruction pc) {
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  
+  /* 是否解密代码 */
+  if (nlo_opt_ei(opt)) {
+    nluaV_DeInstruction deins = G(L)->ideins;
+    deins(L, &pc);
+  }
+  
+  /* 是否解密指令数据 */
+  if (nlo_opt_eid(opt)) {
+    nluaV_DeInstructionData deidata = g->ideidata;
+    deidata(L, &pc);
+  }
+  
+  return pc;
+}
+
 static int op_move(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                    const Instruction** pc, int* pnexeccalls) {
   op_common();
   setobjs2s(L, ra, RB(ins));
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_loadk(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                     const Instruction** pc, int* pnexeccalls) {
   op_common();
   setobj2s(L, ra, KBx(ins));
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_loadbool(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -415,8 +434,7 @@ static int op_loadbool(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   if (GETARG_C(ins)) {
     (*pc)++;
   }
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_loadnil(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -427,8 +445,7 @@ static int op_loadnil(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   do {
     setnilvalue(rb--);
   } while (rb >= ra);
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_getupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -437,8 +454,7 @@ static int op_getupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   op_common();
   b = GETARG_B(ins);
   setobj2s(L, ra, cl->upvals[b]->v);
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_getglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -451,8 +467,7 @@ static int op_getglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl
   lua_assert(ttisstring(rb));
   Protect(luaV_gettable(L, &g, rb, ra));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_gettable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -460,8 +475,7 @@ static int op_gettable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   op_common();
   Protect(luaV_gettable(L, RB(ins), RKC(ins), ra));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_setglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -473,8 +487,7 @@ static int op_setglobal(lua_State* L, Instruction ins, StkId* base, LClosure* cl
   lua_assert(ttisstring(KBx(ins)));
   Protect(luaV_settable(L, &g, KBx(ins), ra));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_setupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -486,8 +499,7 @@ static int op_setupval(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   setobj(L, uv->v, ra);
   luaC_barrier(L, uv, ra);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_settable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -496,8 +508,7 @@ static int op_settable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   Protect(luaV_settable(L, ra, RKB(ins), RKC(ins)));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_newtable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -510,8 +521,7 @@ static int op_newtable(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   sethvalue(L, ra, luaH_new(L, luaO_fb2int(b), luaO_fb2int(c)));
   Protect(luaC_checkGC(L));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_self(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -523,8 +533,7 @@ static int op_self(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   setobjs2s(L, ra+1, rb);
   Protect(luaV_gettable(L, rb, RKC(ins), ra));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_add(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -533,8 +542,7 @@ static int op_add(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_numadd, TM_ADD);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_sub(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -543,8 +551,7 @@ static int op_sub(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_numsub, TM_SUB);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_mul(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -553,8 +560,7 @@ static int op_mul(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_nummul, TM_MUL);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_div(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -563,8 +569,7 @@ static int op_div(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_numdiv, TM_DIV);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_mod(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -573,8 +578,7 @@ static int op_mod(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_nummod, TM_MOD);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_pow(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -583,8 +587,7 @@ static int op_pow(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   arith_op(luai_numpow, TM_POW);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_unm(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -601,8 +604,7 @@ static int op_unm(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     Protect(Arith(L, ra, rb, rb, TM_UNM));
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_not(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -613,8 +615,7 @@ static int op_not(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   res = l_isfalse(RB(ins));  /* next assignment may change this value */
   setbvalue(ra, res);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_len(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -640,8 +641,7 @@ static int op_len(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     }
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_concat(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -655,8 +655,7 @@ static int op_concat(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   Protect(luaV_concat(L, c-b+1, c); luaC_checkGC(L));
   setobjs2s(L, RA(ins), (*base)+b);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_jmp(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -665,8 +664,7 @@ static int op_jmp(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   dojump(L, (*pc), GETARG_sBx(ins));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_eq(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -679,11 +677,10 @@ static int op_eq(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   rc = RKC(ins);
   Protect(
           if (equalobj(L, rb, rc) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(**pc));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
           )
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_lt(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -692,11 +689,10 @@ static int op_lt(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   Protect(
           if (luaV_lessthan(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(**pc));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
           )
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_le(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -705,11 +701,10 @@ static int op_le(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   Protect(
           if (lessequal(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(**pc));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
           )
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_test(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -717,10 +712,9 @@ static int op_test(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   op_common();
   
   if (l_isfalse(ra) != GETARG_C(ins))
-    dojump(L, (*pc), GETARG_sBx(**pc));
+    dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_testset(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -731,11 +725,10 @@ static int op_testset(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   rb = RB(ins);
   if (l_isfalse(rb) != GETARG_C(ins)) {
     setobjs2s(L, ra, rb);
-    dojump(L, (*pc), GETARG_sBx(**pc));
+    dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
   }
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_call(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -752,24 +745,20 @@ static int op_call(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   switch (luaD_precall(L, ra, nresults)) {
     case PCRLUA: {
       (*pnexeccalls)++;
-      do_op_end(ins);
-      return OPCODE_DISPATCH_NEWFRAME;  /* restart luaV_execute over new Lua function */
+      do_op_end(ins,OPCODE_DISPATCH_NEWFRAME);  /* restart luaV_execute over new Lua function */
     }
     case PCRC: {
       /* it was a C function (`precall' called it); adjust results */
       if (nresults >= 0) L->top = L->ci->top;
       (*base)=L->base;
-      do_op_end(ins);
-      return OPCODE_DISPATCH_CONTINUE;
+      do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
     }
     default: {
-      do_op_end(ins);
-      return OPCODE_DISPATCH_RETURN;  /* yield */
+      do_op_end(ins,OPCODE_DISPATCH_RETURN);    /* yield */
     }
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_tailcall(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -797,22 +786,18 @@ static int op_tailcall(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
       ci->savedpc = L->savedpc;
       ci->tailcalls++;  /* one more call lost */
       L->ci--;  /* remove new frame */
-      do_op_end(ins);
-      return OPCODE_DISPATCH_NEWFRAME;
+      do_op_end(ins,OPCODE_DISPATCH_NEWFRAME);
     }
     case PCRC: {  /* it was a C function (`precall' called it) */
       (*base) = L->base;
-      do_op_end(ins);
-      return OPCODE_DISPATCH_CONTINUE;
+      do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
     }
     default: {
-      do_op_end(ins);
-      return OPCODE_DISPATCH_RETURN;  /* yield */
+      do_op_end(ins,OPCODE_DISPATCH_RETURN);  /* yield */
     }
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_return(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -826,18 +811,15 @@ static int op_return(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   L->savedpc = *pc;
   b = luaD_poscall(L, ra);
   if (--(*pnexeccalls) == 0) {  /* was previous function running `here'? */
-    do_op_end(ins);
-    return OPCODE_DISPATCH_RETURN;    /* no: return */
+    do_op_end(ins,OPCODE_DISPATCH_RETURN); /* no: return */
   } else {  /* yes: continue its execution */
     if (b) L->top = L->ci->top;
     lua_assert(isLua(L->ci));
     lua_assert(GET_OPCODE(*((L->ci)->savedpc - 1)) == OP_CALL);/* 这里要做转编码判断 */
-    do_op_end(ins);
-    return OPCODE_DISPATCH_NEWFRAME;
+    do_op_end(ins,OPCODE_DISPATCH_NEWFRAME);
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_forloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -857,8 +839,7 @@ static int op_forloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     setnvalue(ra+3, idx);  /* ...and external index */
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_forprep(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -881,8 +862,7 @@ static int op_forprep(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   setnvalue(ra, luai_numsub(nvalue(ra), nvalue(pstep)));
   dojump(L, *pc, GETARG_sBx(ins));
 
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_tforloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -900,11 +880,10 @@ static int op_tforloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   cb = RA(ins) + 3;  /* previous call may change the stack */
   if (!ttisnil(cb)) {  /* continue loop? */
     setobjs2s(L, cb-1, cb);  /* save control variable */
-    dojump(L, *pc, GETARG_sBx(**pc));  /* jump back */
+    dojump(L, *pc, GETARG_sBx(readpc(L,**pc)));  /* jump back */
   }
   (*pc)++;
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -923,7 +902,11 @@ static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     L->top = L->ci->top;
   }
   /* 如果寄存器c为0，则 */
-  if (c == 0) c = cast_int(*(*pc)++);
+  if (c == 0) {
+    //c = cast_int(*(*pc)++);
+    c = cast_int(readpc(L, **pc));
+    (*pc)++;
+  }
   runtime_check(L, ttistable(ra));
   h = hvalue(ra);
   last = ((c-1)*LFIELDS_PER_FLUSH) + n;
@@ -935,8 +918,7 @@ static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     luaC_barriert(L, h, val);
   }
 
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_close(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -945,8 +927,7 @@ static int op_close(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   luaF_close(L, ra);
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_closure(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -960,19 +941,18 @@ static int op_closure(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   nup = p->nups;
   ncl = luaF_newLclosure(L, nup, cl->env);
   ncl->l.p = p;
-  for (j=0; j<nup; j++, *pc++) {
-    if (GET_OPCODE(**pc) == OP_GETUPVAL)
-      ncl->l.upvals[j] = cl->upvals[GETARG_B(**pc)];
+  for (j=0; j<nup; j++, (*pc)++) {
+    if (GET_OPCODE(readpc(L,**pc)) == OP_GETUPVAL)
+      ncl->l.upvals[j] = cl->upvals[GETARG_B(readpc(L,**pc))];
     else {
-      lua_assert(GET_OPCODE(**pc) == OP_MOVE);
-      ncl->l.upvals[j] = luaF_findupval(L, *base + GETARG_B(**pc));
+      lua_assert(GET_OPCODE(readpc(L,**pc)) == OP_MOVE);
+      ncl->l.upvals[j] = luaF_findupval(L, *base + GETARG_B(readpc(L,**pc)));
     }
   }
   setclvalue(L, ra, ncl);
   Protect(luaC_checkGC(L));
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 static int op_vararg(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -1001,8 +981,7 @@ static int op_vararg(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
     }
   }
   
-  do_op_end(ins);
-  return OPCODE_DISPATCH_CONTINUE;
+  do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
 
 /* Opcode分派函数表 */

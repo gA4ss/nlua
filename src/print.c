@@ -17,6 +17,7 @@
 #include "lopcodes.h"
 #include "lundump.h"
 #include "nopcodes.h"
+#include "nundump.h"
 
 #define PrintFunction	luaU_print
 
@@ -73,21 +74,43 @@ static void PrintConstant(const Proto* f, int i) {
   }
 }
 
+static Instruction deins(lua_State* L, Instruction ins) {
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  
+  /* 是否解密代码 */
+  if (nlo_opt_ei(opt)) {
+    nluaV_DeInstruction deins = G(L)->ideins;
+    deins(L, &ins);
+  }
+  
+  /* 是否解密指令数据 */
+  if (nlo_opt_eid(opt)) {
+    nluaV_DeInstructionData deidata = g->ideidata;
+    deidata(L, &ins);
+  }
+  
+  return ins;
+}
+
 static void PrintCode(lua_State* L, const Proto* f) {
   OPR* opr = R(L);
   const Instruction* code=f->code;
   int pc,n=f->sizecode;
   /* 遍历指令 */
   for (pc=0; pc<n; pc++) {
-    Instruction i=code[pc];
+    Instruction i;
+    OpCode o;
+    int a,b,c,bx,sbx;
     
-    /* 解析OpCode */
-    OpCode o=GET_OPCODE(i);
-    int a=GETARG_A(i);
-    int b=GETARG_B(i);
-    int c=GETARG_C(i);
-    int bx=GETARG_Bx(i);
-    int sbx=GETARG_sBx(i);
+    i=code[pc];
+    i=deins(L,i);
+    o=GET_OPCODE(i);
+    a=GETARG_A(i);
+    b=GETARG_B(i);
+    c=GETARG_C(i);
+    bx=GETARG_Bx(i);
+    sbx=GETARG_sBx(i);
     
     /* 获取当前指令对应的源代码行数 */
     int line=getlinenm(f,pc);

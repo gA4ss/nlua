@@ -241,16 +241,18 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
   global_State* g = G(L);
   unsigned int opt = g->nopt;
   
-  /* 是否解密代码 */
-  if (nlo_opt_ei(opt)) {
-    nluaV_DeInstruction deins = G(L)->ideins;
-    deins(L, pins);
-  }
-  
-  /* 是否解密指令数据 */
-  if (nlo_opt_eid(opt)) {
-    nluaV_DeInstructionData deidata = g->ideidata;
-    deidata(L, pins);
+  if (g->is_nlua) {
+    /* 是否解密代码 */
+    if (nlo_opt_ei(opt)) {
+      nluaV_DeInstruction deins = G(L)->ideins;
+      deins(L, pins);
+    }
+    
+    /* 是否解密指令数据 */
+    if (nlo_opt_eid(opt)) {
+      nluaV_DeInstructionData deidata = g->ideidata;
+      deidata(L, pins);
+    }
   }
   
   return 0;
@@ -261,6 +263,13 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
  * pins 当前要执行指令的指针
  */
 int nluaV_insend(lua_State *L, Instruction* pins) {
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  
+  UNUSED(g);
+  UNUSED(opt);
+  if (g->is_nlua) {
+  }
   return 0;
 }
 

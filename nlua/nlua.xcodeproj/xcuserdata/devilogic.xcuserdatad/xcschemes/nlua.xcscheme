@@ -59,8 +59,12 @@
       </BuildableProductRunnable>
       <CommandLineArguments>
          <CommandLineArgument
-            argument = "/Users/devilogic/workspace/love.lua"
+            argument = "/Users/devilogic/workspace/me.dump"
             isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-3 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-k iloveyou -1 -2 -3 -4 -5 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
@@ -84,7 +88,7 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/devilogic/workspace/test.dump"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-k /Users/devilogic/workspace/hello.lua -x /Users/devilogic/workspace/hello.lua -1 -2 -3 -4 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"

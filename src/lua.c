@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-#define nlua_vm
+//#define nlua_vm
 #ifdef nlua_vm
 
 #include <signal.h>
