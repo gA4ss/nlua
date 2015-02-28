@@ -172,6 +172,10 @@ static void init_nlua(global_State *g) {
   g->ienidata = nluaV_enidata;
   g->ideidata = nluaV_deidata;
   
+  /* 设置指令加解密函数 */
+  g->ienins = nluaV_enins;
+  g->ideins = nluaV_deins;
+  
   /* 设置文件加解密函数 */
   g->enbuf = nluaV_enbuf;
   g->debuf = nluaV_debuf;

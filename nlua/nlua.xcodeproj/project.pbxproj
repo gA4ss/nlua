@@ -77,7 +77,7 @@
 		BC4CBD5B1A944B5600C50272 /* ldo.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = ldo.c; path = ../../src/ldo.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD5C1A944B5600C50272 /* ldo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ldo.h; path = ../../src/ldo.h; sourceTree = "<group>"; };
 		BC4CBD5D1A944B5600C50272 /* ldump.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = ldump.c; path = ../../src/ldump.c; sourceTree = "<group>"; tabWidth = 2; };
-		BC4CBD5E1A944B5600C50272 /* lfunc.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lfunc.c; path = ../../src/lfunc.c; sourceTree = "<group>"; };
+		BC4CBD5E1A944B5600C50272 /* lfunc.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = lfunc.c; path = ../../src/lfunc.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD5F1A944B5600C50272 /* lfunc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lfunc.h; path = ../../src/lfunc.h; sourceTree = "<group>"; };
 		BC4CBD601A944B5600C50272 /* lgc.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = lgc.c; path = ../../src/lgc.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD611A944B5600C50272 /* lgc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lgc.h; path = ../../src/lgc.h; sourceTree = "<group>"; };
@@ -91,7 +91,7 @@
 		BC4CBD691A944B5600C50272 /* lmem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lmem.h; path = ../../src/lmem.h; sourceTree = "<group>"; };
 		BC4CBD6A1A944B5600C50272 /* loadlib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = loadlib.c; path = ../../src/loadlib.c; sourceTree = "<group>"; };
 		BC4CBD6B1A944B5600C50272 /* lobject.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lobject.c; path = ../../src/lobject.c; sourceTree = "<group>"; };
-		BC4CBD6C1A944B5600C50272 /* lobject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lobject.h; path = ../../src/lobject.h; sourceTree = "<group>"; };
+		BC4CBD6C1A944B5600C50272 /* lobject.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = lobject.h; path = ../../src/lobject.h; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD6D1A944B5600C50272 /* lopcodes.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = lopcodes.c; path = ../../src/lopcodes.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD6E1A944B5600C50272 /* lopcodes.h */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = lopcodes.h; path = ../../src/lopcodes.h; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD6F1A944B5600C50272 /* loslib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = loslib.c; path = ../../src/loslib.c; sourceTree = "<group>"; };
@@ -129,6 +129,7 @@
 		BCADED6B1A9ADADF00356922 /* crc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = crc.h; path = ../../src/crc.h; sourceTree = "<group>"; };
 		BCADED6C1A9ADADF00356922 /* xor.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = xor.c; path = ../../src/xor.c; sourceTree = "<group>"; };
 		BCADED6D1A9ADADF00356922 /* xor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = xor.h; path = ../../src/xor.h; sourceTree = "<group>"; };
+		BCAFD2AC1AA240AE00E82C28 /* nversion.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nversion.h; path = ../../src/nversion.h; sourceTree = "<group>"; };
 		BCB825BC1A9F935700CEF718 /* lvmorig */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = lvmorig; path = ../../src/lvmorig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -246,6 +247,7 @@
 				BC4CBD881A944B5600C50272 /* print.c */,
 				BCADED6C1A9ADADF00356922 /* xor.c */,
 				BCADED6D1A9ADADF00356922 /* xor.h */,
+				BCAFD2AC1AA240AE00E82C28 /* nversion.h */,
 			);
 			path = nlua;
 			sourceTree = "<group>";

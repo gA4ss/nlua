@@ -1039,7 +1039,10 @@ reentry:  /* 重新进入点 */
   pc = L->savedpc;                /* 获取当前的pc值 */
   cl = &clvalue(L->ci->func)->l;  /* 获取当前的函数结构指针 */
   base = L->base;                 /* 获取当前的栈基 */
-  //k = cl->p->k;                   /* 获取当前的常量队列 */
+  //k = cl->p->k;                 /* 获取当前的常量队列 */
+  
+  /* 使用cl的值到哈希表中对判别，如果不在表中则关闭is_nlua选项 */
+  
   /* 解释主循环 */
   for (;;) {
     const Instruction i = *pc++;

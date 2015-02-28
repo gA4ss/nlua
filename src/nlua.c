@@ -280,9 +280,6 @@ int nluaV_insend(lua_State *L, Instruction* pins) {
 int nluaV_enins(lua_State* L, Instruction* pins) {
   unsigned int key;
   global_State* g = G(L);
-  
-  /* 加密是在nluac中，不需要动态生成密码 */
-  
   key=g->ekey;
   return g->enbuf(L, key, (unsigned char*)pins,
                   (unsigned char*)pins, sizeof(Instruction));
@@ -295,16 +292,8 @@ int nluaV_enins(lua_State* L, Instruction* pins) {
 int nluaV_deins(lua_State* L, Instruction* pins) {
   unsigned int key;
   global_State* g = G(L);
-  unsigned int opt = g->nopt;
-  
-  if (nlo_opt_efk(opt)) {
-    key=g->fkmake(L,g->fkeyp);
-    key=crc32((unsigned char*)&key, 4);
-  } else {
-    key=g->ekey;
-  }
-  
-  return g->enbuf(L, key, (unsigned char*)pins,
+  key=g->ekey;
+  return g->debuf(L, key, (unsigned char*)pins,
                   (unsigned char*)pins, sizeof(Instruction));
 }
 

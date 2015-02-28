@@ -186,15 +186,15 @@ print.o: print.c ldebug.h lstate.h lua.h luaconf.h lobject.h llimits.h \
 # nlua
 nundump.o: nundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
   llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
-  nlua.h
+  nlua.h nversion.h
 ndump.o: ndump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
-  lzio.h lmem.h nundump.h nlua.h
+  lzio.h lmem.h nundump.h nlua.h nversion.h
 nopcodes.o: nopcodes.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
   llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
-  nlua.h nopcodes.h lopcodes.h
+  nlua.h nopcodes.h lopcodes.h nversion.h
 nlua.o: nlua.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
   llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
-  nlua.h nopcodes.h lopcodes.h
+  nlua.h nopcodes.h lopcodes.h nversion.h
 crc.o: crc.c crc.h
 xor.o: xor.c xor.h
 

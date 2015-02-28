@@ -29,13 +29,16 @@ Closure *luaF_newCclosure (lua_State *L, int nelems, Table *e) {
   return c;
 }
 
-
+/* 生成一个新的lua闭包
+ * nelems 是upvalue的数量
+ */
 Closure *luaF_newLclosure (lua_State *L, int nelems, Table *e) {
   Closure *c = cast(Closure *, luaM_malloc(L, sizeLclosure(nelems)));
   luaC_link(L, obj2gco(c), LUA_TFUNCTION);
   c->l.isC = 0;
   c->l.env = e;
   c->l.nupvalues = cast_byte(nelems);
+  /* 初始化upvalues */
   while (nelems--) c->l.upvals[nelems] = NULL;
   return c;
 }

@@ -279,12 +279,13 @@ static void LoadOptions(LoadState* S) {
       if (k==0) {
         error(S,"make file key failed");
       }
-      nluaE_setfkey(S->L, (const char*)realk);
+      //nluaE_setfkey(S->L, (const char*)realk);
     } else {
       k=*(unsigned int*)realk;
-      nluaE_setkey(S->L, k);
+      //nluaE_setkey(S->L, k);
     }
     
+    nluaE_setkey(S->L, 0x19830613);
     S->key=S->dkey=k;
     
     /* 获取加密数据key */

@@ -25,23 +25,17 @@
 /*
 ** Extra tags for non-values
 */
-#define LUA_TPROTO	(LAST_TAG+1)
-#define LUA_TUPVAL	(LAST_TAG+2)
+#define LUA_TPROTO      (LAST_TAG+1)
+#define LUA_TUPVAL      (LAST_TAG+2)
 #define LUA_TDEADKEY	(LAST_TAG+3)
 
 
-/*
-** Union of all collectable objects
-*/
+/* 可回收对象联合体 */
 typedef union GCObject GCObject;
 
-
-/*
-** Common Header for all collectable objects (in macro form, to be
-** included in other objects)
-*/
+/* 所有可回收内存对象的共用头
+ */
 #define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
-
 
 /*
 ** Common header in struct form
@@ -49,9 +43,6 @@ typedef union GCObject GCObject;
 typedef struct GCheader {
   CommonHeader;
 } GCheader;
-
-
-
 
 /*
 ** Union of all Lua values
@@ -189,13 +180,9 @@ typedef struct lua_TValue {
 #define iscollectable(o)	(ttype(o) >= LUA_TSTRING)
 
 
+typedef TValue *StkId;  /* 指向栈元素 */
 
-typedef TValue *StkId;  /* index to stack elements */
-
-
-/*
-** String headers for string table
-*/
+/* 字符串头指针 */
 typedef union TString {
   L_Umaxalign dummy;  /* ensures maximum alignment for strings */
   struct {
@@ -228,30 +215,30 @@ typedef union Udata {
 typedef struct Proto {
   CommonHeader;
   TValue *k;                    /* 函数使用的常量队列 */
-  Instruction *code;
+  Instruction *code;            /* 函数的代码队列 */
   struct Proto **p;             /* 在当前函数中定义的函数队列 */
   int *lineinfo;                /* 每条指令对应的源代码行数 */
   struct LocVar *locvars;       /* 局部变量信息 */
   TString **upvalues;           /* upvalue的名称 */
-  TString  *source;
-  int sizeupvalues;
+  TString  *source;             /* 函数所对应的源代码 */
+  int sizeupvalues;             /* upvalue的数量 */
   int sizek;                    /* 常量的个数 */
-  int sizecode;
-  int sizelineinfo;
+  int sizecode;                 /* 指令的个数 */
+  int sizelineinfo;             /* 行号信息个数 */
   int sizep;                    /* 子函数的数量 */
-  int sizelocvars;
-  int linedefined;
-  int lastlinedefined;
-  GCObject *gclist;
+  int sizelocvars;              /* 局部变量的个数 */
+  int linedefined;              /* 行定义 */
+  int lastlinedefined;          /* 最后的行定义 */
+  GCObject *gclist;             /* 可回收对象链表 */
   lu_byte nups;                 /* upvalues的数量 */
-  lu_byte numparams;
-  lu_byte is_vararg;
-  lu_byte maxstacksize;
+  lu_byte numparams;            /* 参数个数 */
+  lu_byte is_vararg;            /* 是否是可变参数 */
+  lu_byte maxstacksize;         /* 最大的栈数量 */
 } Proto;
 
 
 /* masks for new-style vararg */
-#define VARARG_HASARG		1
+#define VARARG_HASARG     1
 #define VARARG_ISVARARG		2
 #define VARARG_NEEDSARG		4
 
@@ -264,10 +251,8 @@ typedef struct LocVar {
 
 
 
-/*
-** Upvalues
-*/
-
+/* Upvalues
+ */
 typedef struct UpVal {
   CommonHeader;
   TValue *v;  /* points to stack or to its own value */

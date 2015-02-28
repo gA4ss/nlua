@@ -517,10 +517,13 @@ static void f_parser (lua_State *L, void *ud) {
                                                              &p->buff, p->name);
    */
   
+  /* 生成闭包结构 */
   cl = luaF_newLclosure(L, tf->nups, hvalue(gt(L)));
-  cl->l.p = tf;
-  for (i = 0; i < tf->nups; i++)  /* 初始化最后的upvalue */
+  cl->l.p = tf;       /* 关联函数原型 */
+  for (i = 0; i < tf->nups; i++)  /* 为upvalue分配空间 */
     cl->l.upvals[i] = luaF_newupval(L);
+  
+  /* 将生成的闭包设置到表中 */
   
   /* 设置这个闭包指针到栈顶，为执行做好准备 */
   setclvalue(L, L->top, cl);

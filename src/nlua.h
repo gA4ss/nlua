@@ -14,12 +14,7 @@
 #include "lcode.h"
 #include "lstate.h"
 #include "lobject.h"
-
-#define NLUA_VERSION        "nLua 1.0"
-#define NLUA_RELEASE        "nLua 1.0.0"
-#define NLUA_VERSION_NUM    100
-#define NLUA_COPYRIGHT      "Copyright (C) 2014-2015 nagain.com, PUC-Rio"
-#define NLUA_AUTHORS        "devilogic"
+#include "nversion.h"
 
 /* 预编译字节码文件头 "<vt>YWB"*/
 #define	NLUA_SIGNATURE      "\013YWB"
@@ -43,6 +38,8 @@ LUAI_FUNC int nluaV_enidata (lua_State* L, Instruction* pins);
 LUAI_FUNC int nluaV_deidata (lua_State* L, Instruction* pins);
 LUAI_FUNC int nluaV_enbuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
 LUAI_FUNC int nluaV_debuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
+LUAI_FUNC int nluaV_enins(lua_State* L, Instruction* pins);
+LUAI_FUNC int nluaV_deins(lua_State* L, Instruction* pins);
 LUAI_FUNC lu_int32 nluaV_fkmake (lua_State* L, const char* path);/* 出错返回0 */
 
 #endif

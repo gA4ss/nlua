@@ -116,9 +116,7 @@ static void DumpCode(const Proto* f,DumpState* D) {
     
     /* 是否加密指令 */
     if (nlo_ei(nopt)) {
-      for (i=0; i<f->sizecode; i++) {
-        for (i=0; i<f->sizecode; i++) g->ienins(D->L,&(f->code[i]));
-      }
+      for (i=0; i<f->sizecode; i++) g->ienins(D->L,&(f->code[i]));
     }
   }/* end if */
   
@@ -233,7 +231,7 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   }
   
   /* 设置key */
-  nluaE_setkey(L, D.dkey);
+  nluaE_setkey(L, 0x19830613);
   
   /* 加密NagaOpt密钥 */
   if (nlo_ef(nopt) || (nlo_ed(nopt))) {

@@ -40,17 +40,14 @@ typedef struct stringtable {
   int size;           /* hash表的总大小 */
 } stringtable;
 
-
-/*
-** 调用信息结构
-*/
+/* 调用信息结构 */
 typedef struct CallInfo {
-  StkId base;  /* base for this function */
-  StkId func;  /* function index in the stack */
-  StkId	top;  /* top for this function */
-  const Instruction *savedpc;
-  int nresults;  /* expected number of results from this function */
-  int tailcalls;  /* number of tail calls lost under this entry */
+  StkId base;                 /* 当前函数的栈基 */
+  StkId func;                 /* 函数在栈上的索引 */
+  StkId	top;                  /* 当前函数的栈顶 */
+  const Instruction *savedpc; /* 用于保存到的pc */
+  int nresults;               /* expected number of results from this function */
+  int tailcalls;              /* number of tail calls lost under this entry */
 } CallInfo;
 
 #define curr_func(L)	(clvalue(L->ci->func))
@@ -127,6 +124,8 @@ typedef struct global_State {
     char fkeyp[MAX_KEY_PATH];       /* 文件key的路径 */
     unsigned int ekey;              /* 解密所需的密码 */
   };
+  
+  Table* clotab;                    /* 闭包纪录表 */
   
   /* 指令调用前后要执行的函数 */
   nluaV_InstructionStart istart;    /* 指令开始前执行的函数 */

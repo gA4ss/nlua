@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-#define nlua_compile
+//#define nlua_compile
 #ifdef nlua_compile
 
 #include <errno.h>

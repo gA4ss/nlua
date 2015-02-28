@@ -4,7 +4,7 @@
 ** See Copyright Notice in lua.h
 */
 
-//#define nlua_vm
+#define nlua_vm
 #ifdef nlua_vm
 
 #include <signal.h>
@@ -110,7 +110,7 @@ static int docall (lua_State *L, int narg, int clear) {
 
 
 static void print_version (void) {
-  l_message(NULL, LUA_RELEASE "  " LUA_COPYRIGHT);
+  l_message(NULL, NLUA_RELEASE "  " NLUA_COPYRIGHT);
 }
 
 
