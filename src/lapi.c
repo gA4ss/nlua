@@ -37,11 +37,11 @@ const char lua_ident[] =
   "$URL: www.lua.org $\n";
 
 
-
+/* 检查n索引是否在栈合法范围内 */
 #define api_checknelems(L, n)	api_check(L, (n) <= (L->top - L->base))
-
+/* 检查i是否是一个空对象 */
 #define api_checkvalidindex(L, i)	api_check(L, (i) != luaO_nilobject)
-
+/* 增加栈指针,检验当前全局的栈顶必须小于当前函数调用链 */
 #define api_incr_top(L)   {api_check(L, L->top < L->ci->top); L->top++;}
 
 
@@ -155,7 +155,7 @@ LUA_API lua_State *lua_newthread (lua_State *L) {
 ** basic stack manipulation
 */
 
-
+/* 获取栈顶的索引 */
 LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - L->base);
 }
@@ -186,7 +186,6 @@ LUA_API void lua_remove (lua_State *L, int idx) {
   L->top--;
   lua_unlock(L);
 }
-
 
 LUA_API void lua_insert (lua_State *L, int idx) {
   StkId p;
@@ -425,7 +424,7 @@ LUA_API void lua_pushnil (lua_State *L) {
   lua_unlock(L);
 }
 
-
+/* 向栈顶压入一个数字 */
 LUA_API void lua_pushnumber (lua_State *L, lua_Number n) {
   lua_lock(L);
   setnvalue(L->top, n);
@@ -441,7 +440,7 @@ LUA_API void lua_pushinteger (lua_State *L, lua_Integer n) {
   lua_unlock(L);
 }
 
-
+/* 压入一个字符串 */
 LUA_API void lua_pushlstring (lua_State *L, const char *s, size_t len) {
   lua_lock(L);
   luaC_checkGC(L);

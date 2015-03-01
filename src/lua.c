@@ -93,26 +93,27 @@ static int traceback (lua_State *L) {
   return 1;
 }
 
-
+/* 调用函数 
+ * narg 参数个数
+ * clear 如果是1则表示无返回值
+ */
 static int docall (lua_State *L, int narg, int clear) {
   int status;
-  int base = lua_gettop(L) - narg;  /* function index */
-  lua_pushcfunction(L, traceback);  /* push traceback function */
-  lua_insert(L, base);  /* put it under chunk and args */
+  int base = lua_gettop(L) - narg;  /* 得到函数在栈上的索引 */
+  lua_pushcfunction(L, traceback);  /* 压入traceback函数 */
+  lua_insert(L, base);              /* put it under chunk and args */
   signal(SIGINT, laction);
   status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
   signal(SIGINT, SIG_DFL);
-  lua_remove(L, base);  /* remove traceback function */
-  /* force a complete garbage collection in case of errors */
+  lua_remove(L, base);   /* 移除 traceback 函数 */
+  /* 发生错误，强制一次内存回收 */
   if (status != 0) lua_gc(L, LUA_GCCOLLECT, 0);
   return status;
 }
 
-
 static void print_version (void) {
   l_message(NULL, NLUA_RELEASE "  " NLUA_COPYRIGHT);
 }
-
 
 static int getargs (lua_State *L, char **argv, int n) {
   int narg;

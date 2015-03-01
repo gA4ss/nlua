@@ -174,6 +174,7 @@ static int doargs(lua_State* L, int argc, char* argv[]) {
     argv[--i]=Output;
   }
   
+  /* 设置默认密码 */
   if (ef || ed) {
     if (fkey==0) {
       fkey=0x19830613;

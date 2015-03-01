@@ -285,16 +285,21 @@ static void LoadOptions(LoadState* S) {
       //nluaE_setkey(S->L, k);
     }
     
-    nluaE_setkey(S->L, 0x19830613);
     S->key=S->dkey=k;
     
     /* 获取加密数据key */
-    if (nlo_ed(nopt) || nlo_eid(nopt)) {
+    if (nlo_ed(nopt)) {
       S->dkey=crc32((unsigned char*)&k, 4);
     }
     
     free(realk);
   }/* end if */
+  
+  
+  /* 设置解密指令的密码 */
+  if (nlo_ei(nopt)) {
+    nluaE_setkey(S->L, 0x19830613);
+  }
 }
 
 static void LoadOpcodeTable(LoadState* S) {

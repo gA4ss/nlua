@@ -120,12 +120,9 @@ typedef struct global_State {
   int is_nlua;                      /* 是nlua的文件格式 */
   OPR oprule;                       /* opcode编码规则 */
   unsigned int nopt;                /* nlua的安全选项 */
-  union {
-    char fkeyp[MAX_KEY_PATH];       /* 文件key的路径 */
-    unsigned int ekey;              /* 解密所需的密码 */
-  };
+  unsigned int ekey;                /* 解密所需的密码 */
   
-  Table* clotab;                    /* 闭包纪录表 */
+  //Table* clotab;                    /* 闭包纪录表 */
   
   /* 指令调用前后要执行的函数 */
   nluaV_InstructionStart istart;    /* 指令开始前执行的函数 */
@@ -162,7 +159,7 @@ struct lua_State {
   int basehookcount;
   int hookcount;
   lua_Hook hook;
-  TValue l_gt;                        /* table of globals */
+  TValue l_gt;                        /* 全局变量表 */
   TValue env;                         /* temporary place for environments */
   GCObject *openupval;                /* list of open upvalues in this stack */
   GCObject *gclist;
@@ -212,7 +209,6 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt);
 LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua);
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key);
-LUAI_FUNC void nluaE_setfkey (lua_State *L, const char* key);
 
 #endif
 

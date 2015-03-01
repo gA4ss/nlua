@@ -319,7 +319,7 @@ typedef struct Node {
   TKey i_key;
 } Node;
 
-
+/* 哈希表 */
 typedef struct Table {
   CommonHeader;
   lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 

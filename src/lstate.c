@@ -73,15 +73,15 @@ static void f_luaopen (lua_State *L, void *ud) {
   global_State *g = G(L);
   UNUSED(ud);
   /* 栈初始化 */
-  stack_init(L, L);  /* init stack */
-  /* 初始化全局哈希表 */
-  sethvalue(L, gt(L), luaH_new(L, 0, 2));  /* table of globals */
+  stack_init(L, L);
+  /* 初始化全局变量哈希表 */
+  sethvalue(L, gt(L), luaH_new(L, 0, 2));
   /* 初始化寄存器 */
   sethvalue(L, registry(L), luaH_new(L, 0, 2));  /* registry */
   /* 初始化字符串表 */
-  luaS_resize(L, MINSTRTABSIZE);  /* initial size of string table */
-  luaT_init(L);
-  luaX_init(L);
+  luaS_resize(L, MINSTRTABSIZE);  /* 初始化字符串表长度 */
+  luaT_init(L);                   /* 初始化元操作表 */
+  luaX_init(L);                   /* 初始化字符串表 */
   luaS_fix(luaS_newliteral(L, MEMERRMSG));
   g->GCthreshold = 4*g->totalbytes;
 }
@@ -163,7 +163,7 @@ static void init_nlua(global_State *g) {
   /* 文件类型初始化 */
   g->is_nlua = 0;
   g->nopt = 0;
-  memset(g->fkeyp, 0, MAX_KEY_PATH);
+  g->ekey = 0;
   /* 设置指令前后函数 */
   g->istart = nluaV_insstart;
   g->iend = nluaV_insend;
@@ -284,8 +284,4 @@ LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua) {
 
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key) {
   G(L)->ekey=key;
-}
-
-LUAI_FUNC void nluaE_setfkey (lua_State *L, const char* key) {
-  strcpy(G(L)->fkeyp,key);
 }

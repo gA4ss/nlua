@@ -31,10 +31,10 @@ LUALIB_API void (luaL_setn) (lua_State *L, int t, int n);
 /* extra error code for `luaL_load' */
 #define LUA_ERRFILE     (LUA_ERRERR+1)
 
-
+/* 三方库注册结构 */
 typedef struct luaL_Reg {
-  const char *name;
-  lua_CFunction func;
+  const char *name;             /* 导出函数名称 */
+  lua_CFunction func;           /* 对应的函数 */
 } luaL_Reg;
 
 

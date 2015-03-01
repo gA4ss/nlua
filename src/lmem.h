@@ -13,6 +13,7 @@
 #include "llimits.h"
 #include "lua.h"
 
+/* 内存不足提示 */
 #define MEMERRMSG	"not enough memory"
 
 

@@ -1026,6 +1026,22 @@ nluaV_Instruction nluaV_opcodedisp[NUM_OPCODES] = {
   ,op_vararg
 };
 
+/* 解密指令 */
+static Instruction deins(lua_State *L, Instruction ins) {
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  
+  if (g->is_nlua) {
+    /* 是否解密代码 */
+    if (nlo_opt_ei(opt)) {
+      nluaV_DeInstruction deins = G(L)->ideins;
+      deins(L, &ins);
+    }
+  }
+  
+  return ins;
+}
+
 /* 虚拟执行 */
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
@@ -1041,14 +1057,15 @@ reentry:  /* 重新进入点 */
   base = L->base;                 /* 获取当前的栈基 */
   //k = cl->p->k;                 /* 获取当前的常量队列 */
   
-  /* 使用cl的值到哈希表中对判别，如果不在表中则关闭is_nlua选项 */
-  
   /* 解释主循环 */
   for (;;) {
-    const Instruction i = *pc++;
+    Instruction i = *pc++;
     StkId ra;
     OpCode o;
     int ret;
+    
+    /* 解密指令 */
+    i = deins(L,i);
     
     /* 是否进入hook */
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&

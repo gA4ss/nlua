@@ -242,12 +242,6 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
   unsigned int opt = g->nopt;
   
   if (g->is_nlua) {
-    /* 是否解密代码 */
-    if (nlo_opt_ei(opt)) {
-      nluaV_DeInstruction deins = G(L)->ideins;
-      deins(L, pins);
-    }
-    
     /* 是否解密指令数据 */
     if (nlo_opt_eid(opt)) {
       nluaV_DeInstructionData deidata = g->ideidata;

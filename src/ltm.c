@@ -26,7 +26,7 @@ const char *const luaT_typenames[] = {
   "proto", "upval"
 };
 
-
+/* 初始化元操作表 */
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
     "__index", "__newindex",
@@ -38,7 +38,7 @@ void luaT_init (lua_State *L) {
   int i;
   for (i=0; i<TM_N; i++) {
     G(L)->tmname[i] = luaS_new(L, luaT_eventname[i]);
-    luaS_fix(G(L)->tmname[i]);  /* never collect these names */
+    luaS_fix(G(L)->tmname[i]);  /* 从来不回收这些内存 */
   }
 }
 
