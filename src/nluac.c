@@ -25,6 +25,7 @@
 #include "lopcodes.h"
 #include "lstring.h"
 #include "lundump.h"
+#include "nglobal.h"
 
 /*
  * nlua
@@ -177,7 +178,7 @@ static int doargs(lua_State* L, int argc, char* argv[]) {
   /* 设置默认密码 */
   if (ef || ed) {
     if (fkey==0) {
-      fkey=0x19830613;
+      fkey=NLUA_DEF_KEY;
       fks=4;
     }
   }

@@ -15,6 +15,7 @@
 #include "lstate.h"
 #include "lobject.h"
 #include "nversion.h"
+#include "nglobal.h"
 
 /* 预编译字节码文件头 "<vt>YWB"*/
 #define	NLUA_SIGNATURE      "\013YWB"
@@ -40,6 +41,7 @@ LUAI_FUNC int nluaV_enbuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, 
 LUAI_FUNC int nluaV_debuf (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
 LUAI_FUNC int nluaV_enins(lua_State* L, Instruction* pins);
 LUAI_FUNC int nluaV_deins(lua_State* L, Instruction* pins);
+LUAI_FUNC int nluaV_enproc(lua_State* L, const Proto* f);
 LUAI_FUNC lu_int32 nluaV_fkmake (lua_State* L, const char* path);/* 出错返回0 */
 
 #endif

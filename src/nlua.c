@@ -241,12 +241,10 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
   global_State* g = G(L);
   unsigned int opt = g->nopt;
   
-  if (g->is_nlua) {
-    /* 是否解密指令数据 */
-    if (nlo_opt_eid(opt)) {
-      nluaV_DeInstructionData deidata = g->ideidata;
-      deidata(L, pins);
-    }
+  /* 是否解密指令数据 */
+  if (nlo_opt_eid(opt)) {
+    nluaV_DeInstructionData deidata = g->ideidata;
+    deidata(L, pins);
   }
   
   return 0;
@@ -377,4 +375,25 @@ int nluaV_deidata (lua_State* L, Instruction* pins) {
     d[i] ^= op;
   }
   return 0;
+}
+
+int nluaV_enproc(lua_State* L, const Proto* f) {
+  int i;
+  global_State* g = G(L);
+  /* 计算这个key，可以关联其他保密数据 */
+  //unsigned int key = crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
+  unsigned int key = NLUA_DEF_KEY;
+  /* 加密第一条代码 */
+  nluaE_setkey(L, key);
+  g->ienins(L,&(f->code[0]));
+  
+  /* 加密其余指令 */
+  for (i=1; i<f->sizecode; i++) {
+    /* 使用其他指令的密文hash作为key */
+    key = crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
+    nluaE_setkey(L, key);
+    g->ienins(L,&(f->code[i]));
+  }
+  
+  return f->sizecode;
 }

@@ -61,6 +61,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		BC47417E1AA2F37E00728AF9 /* nglobal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nglobal.h; path = ../../src/nglobal.h; sourceTree = "<group>"; };
+		BC47417F1AA2F42000728AF9 /* FAQ.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = FAQ.txt; path = ../../FAQ.txt; sourceTree = "<group>"; };
 		BC49E3C41A9E2C9000A2CEAC /* nopcodes.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = nopcodes.h; path = ../../src/nopcodes.h; sourceTree = "<group>"; };
 		BC49E3C51A9E2CA400A2CEAC /* nopcodes.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = nopcodes.c; path = ../../src/nopcodes.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBCA91A944AAD00C50272 /* nlua */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = nlua; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -248,6 +250,8 @@
 				BCADED6C1A9ADADF00356922 /* xor.c */,
 				BCADED6D1A9ADADF00356922 /* xor.h */,
 				BCAFD2AC1AA240AE00E82C28 /* nversion.h */,
+				BC47417E1AA2F37E00728AF9 /* nglobal.h */,
+				BC47417F1AA2F42000728AF9 /* FAQ.txt */,
 			);
 			path = nlua;
 			sourceTree = "<group>";

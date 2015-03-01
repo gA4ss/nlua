@@ -88,28 +88,12 @@ static TString* LoadString(LoadState* S) {
   }
 }
 
-/* 根据当前编码表，转换代码 */
-static Instruction RebuildOpcode(lua_State* L, Instruction ins) {
-  OpCode o;
-  OPR* opr = R(L);
-  o=GET_OPCODE(ins);
-  /* opcode重新映射 */
-  o=opr->optab[o];
-  SET_OPCODE(ins, o);
-  return ins;
-}
-
 /* 读取代码 */
 static void LoadCode(LoadState* S, Proto* f) {
-  int i;
   int n=LoadInt(S);       /* 读取指令的个数 */
   f->code=luaM_newvector(S->L,n,Instruction);
   f->sizecode=n;
   LoadVector(S,f->code,n,sizeof(Instruction));
-  /* 如果当前的运行环境是在nlua下并且进行了随机opcode
-   * 转换所有指令的OpCode */
-  if ((G(S->L)->is_nlua) && ((G(S->L)->nopt & 0x01)))
-    for (i=0; i<n; i++) f->code[i] = RebuildOpcode(S->L, f->code[i]);
 }
 
 static Proto* LoadFunction(LoadState* S, TString* p);

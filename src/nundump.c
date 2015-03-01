@@ -298,7 +298,7 @@ static void LoadOptions(LoadState* S) {
   
   /* 设置解密指令的密码 */
   if (nlo_ei(nopt)) {
-    nluaE_setkey(S->L, 0x19830613);
+    nluaE_setkey(S->L, NLUA_DEF_KEY);
   }
 }
 

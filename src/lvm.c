@@ -393,24 +393,50 @@ typedef enum {
   lua_assert((*base) <= L->top && L->top <= L->stack + L->stacksize); \
   lua_assert(L->top == L->ci->top || luaG_checkopenop(ins));
 
-/* 读取pc值的内容 */
-static Instruction readpc(lua_State*L, Instruction pc) {
+/* 解密指令 */
+static Instruction deins(lua_State *L, Instruction ins,
+                         const LClosure *cl, const Instruction *pc) {
   global_State* g = G(L);
   unsigned int opt = g->nopt;
   
-  /* 是否解密代码 */
+  /* 是否解密指令 */
   if (nlo_opt_ei(opt)) {
-    nluaV_DeInstruction deins = G(L)->ideins;
-    deins(L, &pc);
+    nluaV_DeInstruction ideins = G(L)->ideins;
+    
+    /* 如果是当前函数的第一条指令
+     * 判断地址是否相等
+     */
+    if (&(cl->p->code[0]) == pc) {
+      nluaE_setkey(L, NLUA_DEF_KEY);
+    } else {
+      Instruction pins = *(pc-1);
+      unsigned int key = crc32((unsigned char*)&pins, sizeof(Instruction));
+      nluaE_setkey(L, key);
+    }
+    ideins(L, &ins);
+  }
+  
+  return ins;
+}
+
+/* 读取pc值的内容 */
+static Instruction readpc(lua_State*L, const LClosure *cl, const Instruction *pc) {
+  global_State* g = G(L);
+  unsigned int opt = g->nopt;
+  Instruction ins = *pc;
+  
+  /* 是否解密指令 */
+  if (nlo_opt_ei(opt)) {
+    ins = deins(L,ins,cl,pc);
   }
   
   /* 是否解密指令数据 */
   if (nlo_opt_eid(opt)) {
     nluaV_DeInstructionData deidata = g->ideidata;
-    deidata(L, &pc);
+    deidata(L, &ins);
   }
   
-  return pc;
+  return ins;
 }
 
 static int op_move(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
@@ -677,7 +703,7 @@ static int op_eq(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   rc = RKC(ins);
   Protect(
           if (equalobj(L, rb, rc) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,cl,*pc)));
           )
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
@@ -689,7 +715,7 @@ static int op_lt(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   Protect(
           if (luaV_lessthan(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,cl,*pc)));
           )
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
@@ -701,7 +727,7 @@ static int op_le(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   
   Protect(
           if (lessequal(L, RKB(ins), RKC(ins)) == GETARG_A(ins))
-          dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
+          dojump(L, (*pc), GETARG_sBx(readpc(L,cl,*pc)));
           )
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
@@ -712,7 +738,7 @@ static int op_test(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   op_common();
   
   if (l_isfalse(ra) != GETARG_C(ins))
-    dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
+    dojump(L, (*pc), GETARG_sBx(readpc(L,cl,*pc)));
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
 }
@@ -725,7 +751,7 @@ static int op_testset(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   rb = RB(ins);
   if (l_isfalse(rb) != GETARG_C(ins)) {
     setobjs2s(L, ra, rb);
-    dojump(L, (*pc), GETARG_sBx(readpc(L,**pc)));
+    dojump(L, (*pc), GETARG_sBx(readpc(L,cl,*pc)));
   }
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
@@ -880,7 +906,7 @@ static int op_tforloop(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   cb = RA(ins) + 3;  /* previous call may change the stack */
   if (!ttisnil(cb)) {  /* continue loop? */
     setobjs2s(L, cb-1, cb);  /* save control variable */
-    dojump(L, *pc, GETARG_sBx(readpc(L,**pc)));  /* jump back */
+    dojump(L, *pc, GETARG_sBx(readpc(L,cl,*pc)));  /* jump back */
   }
   (*pc)++;
   do_op_end(ins,OPCODE_DISPATCH_CONTINUE);
@@ -904,7 +930,7 @@ static int op_setlist(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   /* 如果寄存器c为0，则 */
   if (c == 0) {
     //c = cast_int(*(*pc)++);
-    c = cast_int(readpc(L, **pc));
+    c = cast_int(readpc(L,cl,*pc));
     (*pc)++;
   }
   runtime_check(L, ttistable(ra));
@@ -942,11 +968,11 @@ static int op_closure(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
   ncl = luaF_newLclosure(L, nup, cl->env);
   ncl->l.p = p;
   for (j=0; j<nup; j++, (*pc)++) {
-    if (GET_OPCODE(readpc(L,**pc)) == OP_GETUPVAL)
-      ncl->l.upvals[j] = cl->upvals[GETARG_B(readpc(L,**pc))];
+    if (GET_OPCODE(readpc(L,cl,*pc)) == OP_GETUPVAL)
+      ncl->l.upvals[j] = cl->upvals[GETARG_B(readpc(L,cl,*pc))];
     else {
       lua_assert(GET_OPCODE(readpc(L,**pc)) == OP_MOVE);
-      ncl->l.upvals[j] = luaF_findupval(L, *base + GETARG_B(readpc(L,**pc)));
+      ncl->l.upvals[j] = luaF_findupval(L, *base + GETARG_B(readpc(L,cl,*pc)));
     }
   }
   setclvalue(L, ra, ncl);
@@ -1026,22 +1052,6 @@ nluaV_Instruction nluaV_opcodedisp[NUM_OPCODES] = {
   ,op_vararg
 };
 
-/* 解密指令 */
-static Instruction deins(lua_State *L, Instruction ins) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
-  
-  if (g->is_nlua) {
-    /* 是否解密代码 */
-    if (nlo_opt_ei(opt)) {
-      nluaV_DeInstruction deins = G(L)->ideins;
-      deins(L, &ins);
-    }
-  }
-  
-  return ins;
-}
-
 /* 虚拟执行 */
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
@@ -1057,15 +1067,34 @@ reentry:  /* 重新进入点 */
   base = L->base;                 /* 获取当前的栈基 */
   //k = cl->p->k;                 /* 获取当前的常量队列 */
   
+#if 0
+  /* 是否加密指令 */
+  if (nlo_ei(nopt)) {
+    unsigned int key = crc32(&(f->code[0]), (f->sizecode)*sizeof(Instruction));
+    /* 加密第一条代码 */
+    nluaE_setkey(L, key);
+    g->ienins(D->L,&(f->code[0]));
+    
+    /* 加密其余指令 */
+    for (i=1; i<f->sizecode; i++) {
+      /* 使用其他指令的密文hash作为key */
+      key = crc32(&(f->code[i-1]), sizeof(Instruction));
+      nluaE_setkey(L, key);
+      g->ienins(D->L,&(f->code[i]));
+    }
+  }
+#endif
+  
   /* 解释主循环 */
   for (;;) {
-    Instruction i = *pc++;
+    Instruction i;
     StkId ra;
     OpCode o;
     int ret;
     
     /* 解密指令 */
-    i = deins(L,i);
+    i = deins(L,*pc,cl,pc);
+    pc++;
     
     /* 是否进入hook */
     if ((L->hookmask & (LUA_MASKLINE | LUA_MASKCOUNT)) &&

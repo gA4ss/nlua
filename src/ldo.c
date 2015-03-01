@@ -488,6 +488,17 @@ struct SParser {    /* `f_parser'函数的参数结构 */
   const char *name;
 };
 
+/* 根据当前编码表，转换代码 */
+static Instruction rebopc(lua_State* L, Instruction ins) {
+  OpCode o;
+  OPR* opr = R(L);
+  o=GET_OPCODE(ins);
+  /* opcode重新映射 */
+  o=opr->optab[o];
+  SET_OPCODE(ins, o);
+  return ins;
+}
+
 /* 语法分析入口 */
 static void f_parser (lua_State *L, void *ud) {
   int i;
@@ -502,13 +513,14 @@ static void f_parser (lua_State *L, void *ud) {
   /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型 
    * 这里主要是判读是脚本文件还是预先编译文件
    */
-  if (c == LUA_SIGNATURE[0]) {
+  if (c == LUA_SIGNATURE[0]) {          /* lua字节码 */
+    nluaE_setnlua(L,0);
     tf = luaU_undump(L, p->z, &p->buff, p->name);
-  } else if (c == NLUA_SIGNATURE[0]) {
+  } else if (c == NLUA_SIGNATURE[0]) {  /* nlua字节码 */
     nluaE_setnlua(L,1);
     tf = nluaU_undump(L, p->z, &p->buff, p->name);
-  } else {
-    /* 纯脚本 */
+  } else {                              /* lua脚本 */
+    nluaE_setnlua(L,0);
     tf = luaY_parser(L, p->z, &p->buff, p->name);
   }
   
@@ -523,7 +535,28 @@ static void f_parser (lua_State *L, void *ud) {
   for (i = 0; i < tf->nups; i++)  /* 为upvalue分配空间 */
     cl->l.upvals[i] = luaF_newupval(L);
   
-  /* 将生成的闭包设置到表中 */
+  /* 这里进行统一的转码 
+   * 如果未开启nlua模式
+   * 这里就是做nlua于正常模式的兼容
+   */
+  if (G(L)->is_nlua == 0) {
+    int i;
+    
+    /* 需要转码 */
+    if (nlo_opt_rop(G(L)->nopt)) {
+      for (i=0; i<tf->sizecode; i++) tf->code[i] = rebopc(L, tf->code[i]);
+    }
+    
+    /* 加密指令数据 */
+    if (nlo_opt_eid(G(L)->nopt)) {
+      for (i=0; i<tf->sizecode; i++) G(L)->ienidata(L,&(tf->code[i]));
+    }
+    
+    /* 加密指令 */
+    if (nlo_opt_ei(G(L)->nopt)) {
+        nluaV_enproc(L,tf);
+    }
+  }/* end if */
   
   /* 设置这个闭包指针到栈顶，为执行做好准备 */
   setclvalue(L, L->top, cl);

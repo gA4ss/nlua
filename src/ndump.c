@@ -109,16 +109,16 @@ static void DumpCode(const Proto* f,DumpState* D) {
   global_State* g=G(D->L);
   NagaLuaOpt* nopt=D->opt;
   if (nlo_eid(nopt) || nlo_ei(nopt)) {
-    /* 是否加密指令 */
+    /* 是否加密指令数据 */
     if (nlo_eid(nopt)) {
       for (i=0; i<f->sizecode; i++) g->ienidata(D->L,&(f->code[i]));
     }
-    
-    /* 是否加密指令 */
-    if (nlo_ei(nopt)) {
-      for (i=0; i<f->sizecode; i++) g->ienins(D->L,&(f->code[i]));
-    }
   }/* end if */
+  
+  /* 是否加密指令 */
+  if (nlo_ei(nopt)) {
+    nluaV_enproc(D->L,f);
+  }
   
   /* 刷入文件 */
   DumpCode2(f,D);
@@ -231,7 +231,7 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   }
   
   /* 设置key */
-  nluaE_setkey(L, 0x19830613);
+  nluaE_setkey(L, NLUA_DEF_KEY);
   
   /* 加密NagaOpt密钥 */
   if (nlo_ef(nopt) || (nlo_ed(nopt))) {
