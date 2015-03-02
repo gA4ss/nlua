@@ -74,37 +74,37 @@ static void PrintConstant(const Proto* f, int i) {
   }
 }
 
-static Instruction deins(lua_State* L, Instruction ins) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
-  
-  /* 是否解密代码 */
-  if (nlo_opt_ei(opt)) {
-    nluaV_DeInstruction deins = G(L)->ideins;
-    deins(L, &ins);
-  }
-  
-  /* 是否解密指令数据 */
-  if (nlo_opt_eid(opt)) {
-    nluaV_DeInstructionData deidata = g->ideidata;
-    deidata(L, &ins);
-  }
-  
-  return ins;
-}
-
 static void PrintCode(lua_State* L, const Proto* f) {
   OPR* opr = R(L);
+  unsigned int opt = G(L)->nopt;
   const Instruction* code=f->code;
   int pc,n=f->sizecode;
+  nluaV_DeInstruction deins = G(L)->ideins;
+  nluaV_DeInstructionData deidata = G(L)->ideidata;
+  
   /* 遍历指令 */
   for (pc=0; pc<n; pc++) {
     Instruction i;
     OpCode o;
     int a,b,c,bx,sbx;
+    unsigned int key;
     
     i=code[pc];
-    i=deins(L,i);
+    
+    if (nlo_opt_ei(opt)) {
+      if (pc==0) {
+        key=NLUA_DEF_KEY;
+      } else {
+        key=crc32((unsigned char*)&code[pc-1], sizeof(Instruction));
+      }
+      nluaE_setkey(L, key);
+      deins(L, &i);
+    }
+    
+    if (nlo_opt_eid(opt)) {
+      deidata(L,&i);
+    }
+  
     o=GET_OPCODE(i);
     a=GETARG_A(i);
     b=GETARG_B(i);

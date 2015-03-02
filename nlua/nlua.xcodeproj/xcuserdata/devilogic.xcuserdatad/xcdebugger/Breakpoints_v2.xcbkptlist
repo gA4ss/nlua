@@ -159,7 +159,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "227"
             endingLineNumber = "227"
-            landmarkName = "DumpOpcodeTable()"
+            landmarkName = "nluaU_dump()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -605,7 +605,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "104"
             endingLineNumber = "104"
-            landmarkName = "LoadCode()"
+            landmarkName = "LoadConstants()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -628,7 +628,7 @@
       <BreakpointProxy
          BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
          <BreakpointContent
-            shouldBeEnabled = "Yes"
+            shouldBeEnabled = "No"
             ignoreCount = "0"
             continueAfterRunningActions = "No"
             filePath = "../src/ndump.c"
@@ -732,9 +732,7 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "672"
-            endingLineNumber = "672"
-            landmarkName = "op_eq()"
-            landmarkType = "7">
+            endingLineNumber = "672">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -780,9 +778,7 @@
             startingColumnNumber = "9223372036854775807"
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "1049"
-            endingLineNumber = "1049"
-            landmarkName = "luaV_execute()"
-            landmarkType = "7">
+            endingLineNumber = "1049">
          </BreakpointContent>
       </BreakpointProxy>
       <BreakpointProxy
@@ -813,7 +809,7 @@
             endingColumnNumber = "9223372036854775807"
             startingLineNumber = "181"
             endingLineNumber = "181"
-            landmarkName = "DumpDebug()"
+            landmarkName = "DumpFunction()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
@@ -862,6 +858,22 @@
             startingLineNumber = "1068"
             endingLineNumber = "1068"
             landmarkName = "luaV_execute()"
+            landmarkType = "7">
+         </BreakpointContent>
+      </BreakpointProxy>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            shouldBeEnabled = "No"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "../src/ndump.c"
+            timestampString = "446920607.056699"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "109"
+            endingLineNumber = "109"
+            landmarkName = "DumpCode()"
             landmarkType = "7">
          </BreakpointContent>
       </BreakpointProxy>
