@@ -389,12 +389,12 @@ static int pmain (lua_State *L) {
   return 0;
 }
 
-
 int main (int argc, char **argv) {
   int status;
   struct Smain s;
   /* 创建一个lua状态 */
   lua_State *L = lua_open();  /* create state */
+  
   if (L == NULL) {
     l_message(argv[0], "cannot create state: not enough memory");
     return EXIT_FAILURE;

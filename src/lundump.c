@@ -77,7 +77,8 @@ static lua_Number LoadNumber(LoadState* S) {
 
 /* 从字节码文件中读取字符串 */
 static TString* LoadString(LoadState* S) {
-  size_t size;
+  //size_t size;
+  int size;
   LoadVar(S,size);                        /* 读取字符串长度 */
   if (size==0)
     return NULL;

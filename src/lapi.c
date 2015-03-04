@@ -47,24 +47,35 @@ const char lua_ident[] =
 
 /* 转换栈索引idx为地址的栈地址对象 */
 static TValue *index2adr (lua_State *L, int idx) {
+  /* 如果idx大于零，直接从栈基获取 */
   if (idx > 0) {
     TValue *o = L->base + (idx - 1);
+    /* 检查索引合法性 */
     api_check(L, idx <= L->ci->top - L->base);
+    /* 如果栈元素超出栈顶则返回空值 */
     if (o >= L->top) return cast(TValue *, luaO_nilobject);
     else return o;
   }
+  /* 
+   * 如果是负值，则从栈顶获取
+   */
   else if (idx > LUA_REGISTRYINDEX) {
     api_check(L, idx != 0 && -idx <= L->top - L->base);
     return L->top + idx;
   }
-  else switch (idx) {  /* pseudo-indices */
+  /* 判断伪索引 */
+  else switch (idx) {
     case LUA_REGISTRYINDEX: return registry(L);
     case LUA_ENVIRONINDEX: {
       Closure *func = curr_func(L);
       sethvalue(L, &L->env, func->c.env);
       return &L->env;
     }
+    /* 全局变量 */
     case LUA_GLOBALSINDEX: return gt(L);
+    /*
+     * upvalue变量
+     */
     default: {
       Closure *func = curr_func(L);
       idx = LUA_GLOBALSINDEX - idx;
@@ -338,7 +349,7 @@ LUA_API int lua_toboolean (lua_State *L, int idx) {
   return !l_isfalse(o);
 }
 
-
+/* 从idx栈索引上取得字符串 */
 LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   StkId o = index2adr(L, idx);
   if (!ttisstring(o)) {
@@ -356,7 +367,7 @@ LUA_API const char *lua_tolstring (lua_State *L, int idx, size_t *len) {
   return svalue(o);
 }
 
-
+/* 计算idx栈索引所指向数据的长度 */
 LUA_API size_t lua_objlen (lua_State *L, int idx) {
   StkId o = index2adr(L, idx);
   switch (ttype(o)) {

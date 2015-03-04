@@ -70,7 +70,7 @@ static void DumpNumber(lua_Number x, DumpState* D) {
   DumpVar(x,D);
 }
 
-static void DumpVector(const void* b, int n, size_t size, DumpState* D) {
+static void DumpVector(const void* b, int n, int size, DumpState* D) {
   DumpInt(n,D);
   DumpMem(b,n,size,D);
 }
@@ -79,10 +79,10 @@ static void DumpString(const TString* s, DumpState* D) {
   global_State* g=G(D->L);
   NagaLuaOpt* nopt=D->opt;
   if (s==NULL || getstr(s)==NULL) {
-    size_t size=0;
+    int size=0;
     DumpVar(size,D);
   } else {
-    size_t size=s->tsv.len+1;		/* 加上一个末尾的 '\0' */
+    int size=s->tsv.len+1;		/* 加上一个末尾的 '\0' */
     DumpVar(size,D);
     
     /* 加密字符串 */

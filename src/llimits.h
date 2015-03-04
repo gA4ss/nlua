@@ -125,4 +125,9 @@ typedef lu_int32 Instruction;
 #define condhardstacktests(x)	x
 #endif
 
+/*
+ * dump，undump专用数据类型
+ */
+typedef unsigned int dp_int32;
+
 #endif

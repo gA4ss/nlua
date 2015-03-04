@@ -50,10 +50,10 @@ typedef struct CallInfo {
   int tailcalls;              /* number of tail calls lost under this entry */
 } CallInfo;
 
-#define curr_func(L)	(clvalue(L->ci->func))
+#define curr_func(L)	(clvalue(L->ci->func))                    /* 获取当前函数 */
 #define ci_func(ci)   (clvalue((ci)->func))
-#define f_isLua(ci)   (!ci_func(ci)->c.isC)
-#define isLua(ci)     (ttisfunction((ci)->func) && f_isLua(ci))
+#define f_isLua(ci)   (!ci_func(ci)->c.isC)                     /* 当前调用函数是不lua函数 */
+#define isLua(ci)     (ttisfunction((ci)->func) && f_isLua(ci)) /* 当前调用函数是lua函数 */
 
 /* 指令处理之前统一调用的函数原型 */
 typedef int (*nluaV_InstructionStart) (lua_State* L, Instruction *pins);

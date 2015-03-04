@@ -102,8 +102,10 @@ generic:
 linux:
 	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-Wl,-E -ldl -lreadline -lhistory -lncurses"
 
+#
+
 macosx:
-	$(MAKE) all MYCFLAGS="-DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-lreadline"
+	$(MAKE) all MYCFLAGS="-arch i386 -DLUA_USE_LINUX -Dnlua_vm -Dnlua_compile" MYLIBS="-arch i386 -lreadline"
 # use this on Mac OS X 10.3-
 #	$(MAKE) all MYCFLAGS=-DLUA_USE_MACOSX
 

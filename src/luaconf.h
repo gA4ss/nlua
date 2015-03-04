@@ -11,7 +11,6 @@
 #include <limits.h>
 #include <stddef.h>
 
-
 /*
 ** ==================================================================
 ** Search for "@@" to find all configurable definitions.
@@ -411,18 +410,25 @@
 ** longs.) Probably you do not need to change this.
 */
 #if LUAI_BITSINT >= 32
-#define LUAI_UINT32	unsigned int
-#define LUAI_INT32	int
+#define LUAI_UINT32     unsigned int
+#define LUAI_INT32      int
 #define LUAI_MAXINT32	INT_MAX
-#define LUAI_UMEM	size_t
-#define LUAI_MEM	ptrdiff_t
+#define LUAI_UMEM       size_t
+
+/* 如果是WIN系统 */
+#if defined WIN32
+#define LUAI_MEM        intptr_t
+#else
+#define LUAI_MEM        ptrdiff_t
+#endif
+
 #else
 /* 16-bit ints */
-#define LUAI_UINT32	unsigned long
-#define LUAI_INT32	long
+#define LUAI_UINT32     unsigned long
+#define LUAI_INT32      long
 #define LUAI_MAXINT32	LONG_MAX
-#define LUAI_UMEM	unsigned long
-#define LUAI_MEM	long
+#define LUAI_UMEM       unsigned long
+#define LUAI_MEM        long
 #endif
 
 
@@ -757,6 +763,8 @@ union luai_Cast { double l_d; long l_l; };
 */
 #define UNUSED(x)           (void)(x)
 
+/*
+ */
 
 #endif
 
