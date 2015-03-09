@@ -57,7 +57,7 @@ static void DumpString(const TString* s, DumpState* D) {
     int size=0;
     DumpVar(size,D);
   } else {
-    int size=s->tsv.len+1;		/* 包含末尾的'\0'字符 */
+    int size=(int)(s->tsv.len)+1;		/* 包含末尾的'\0'字符 */
     DumpVar(size,D);
     DumpBlock(getstr(s),size,D);
   }

@@ -82,7 +82,7 @@ static void DumpString(const TString* s, DumpState* D) {
     int size=0;
     DumpVar(size,D);
   } else {
-    int size=s->tsv.len+1;		/* 加上一个末尾的 '\0' */
+    int size=(int)(s->tsv.len)+1;		/* 加上一个末尾的 '\0' */
     DumpVar(size,D);
     
     /* 加密字符串 */

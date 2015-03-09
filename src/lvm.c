@@ -389,6 +389,7 @@ typedef enum {
   do_op_start(ins); \
   ra=RA(ins); \
   TValue *k=cl->p->k; \
+  (void)k; \
   lua_assert((*base) == L->base && L->base == L->ci->base); \
   lua_assert((*base) <= L->top && L->top <= L->stack + L->stacksize); \
   lua_assert(L->top == L->ci->top || luaG_checkopenop(ins));
