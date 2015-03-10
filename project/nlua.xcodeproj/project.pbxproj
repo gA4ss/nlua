@@ -85,7 +85,7 @@
 		BC4CBD611A944B5600C50272 /* lgc.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lgc.h; path = ../../src/lgc.h; sourceTree = "<group>"; };
 		BC4CBD621A944B5600C50272 /* linit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = linit.c; path = ../../src/linit.c; sourceTree = "<group>"; };
 		BC4CBD631A944B5600C50272 /* liolib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = liolib.c; path = ../../src/liolib.c; sourceTree = "<group>"; };
-		BC4CBD641A944B5600C50272 /* llex.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = llex.c; path = ../../src/llex.c; sourceTree = "<group>"; };
+		BC4CBD641A944B5600C50272 /* llex.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = llex.c; path = ../../src/llex.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD651A944B5600C50272 /* llex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = llex.h; path = ../../src/llex.h; sourceTree = "<group>"; };
 		BC4CBD661A944B5600C50272 /* llimits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = llimits.h; path = ../../src/llimits.h; sourceTree = "<group>"; };
 		BC4CBD671A944B5600C50272 /* lmathlib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lmathlib.c; path = ../../src/lmathlib.c; sourceTree = "<group>"; };

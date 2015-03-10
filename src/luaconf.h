@@ -763,8 +763,9 @@ union luai_Cast { double l_d; long l_l; };
 */
 #define UNUSED(x)           (void)(x)
 
-/*
+/* 对COCOS的支持
  */
+#define COCOS_LUA   1
 
 #endif
 
