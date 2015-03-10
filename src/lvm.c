@@ -384,11 +384,12 @@ typedef enum {
 
 /* opcode处理通用宏 */
 #define op_common() \
-  int nret=0; \
   StkId ra; \
+  TValue *k; \
+  int nret=0; \
   do_op_start(ins); \
   ra=RA(ins); \
-  TValue *k=cl->p->k; \
+  k=cl->p->k; \
   (void)k; \
   lua_assert((*base) == L->base && L->base == L->ci->base); \
   lua_assert((*base) <= L->top && L->top <= L->stack + L->stacksize); \

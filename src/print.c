@@ -88,6 +88,7 @@ static void PrintCode(lua_State* L, const Proto* f) {
     OpCode o;
     int a,b,c,bx,sbx;
     unsigned int key;
+    int line;
     
     i=code[pc];
     
@@ -113,7 +114,7 @@ static void PrintCode(lua_State* L, const Proto* f) {
     sbx=GETARG_sBx(i);
     
     /* 获取当前指令对应的源代码行数 */
-    int line=getlinenm(f,pc);
+    line=getlinenm(f,pc);
     printf("\t%d\t",pc+1);
     if (line>0) printf("[%d]\t",line); else printf("[-]\t");
     

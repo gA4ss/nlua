@@ -322,10 +322,10 @@ typedef struct Node {
 /* 哈希表 */
 typedef struct Table {
   CommonHeader;
-  lu_byte flags;  /* 1<<p means tagmethod(p) is not present */ 
-  lu_byte lsizenode;  /* log2 of size of `node' array */
+  lu_byte flags;            /* 1<<p means tagmethod(p) is not present */
+  lu_byte lsizenode;        /* log2 of size of `node' array */
   struct Table *metatable;
-  TValue *array;  /* array part */
+  TValue *array;            /* array part */
   Node *node;
   Node *lastfree;  /* any free position is before this position */
   GCObject *gclist;

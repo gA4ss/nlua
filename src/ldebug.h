@@ -11,10 +11,10 @@
 #include "lstate.h"
 
 
-#define pcRel(pc, p)	(cast(int, (pc) - (p)->code) - 1)
+#define pcRel(pc, p)        (cast(int, (pc) - (p)->code) - 1)
 
 /* 返回pc对应的源代码行号 */
-#define getlinenm(f,pc)	(((f)->lineinfo) ? (f)->lineinfo[pc] : 0)
+#define getlinenm(f,pc)     ((f)->lineinfo ? (f)->lineinfo[pc] : 0)
 
 #define resethookcount(L)	(L->hookcount = L->basehookcount)
 
