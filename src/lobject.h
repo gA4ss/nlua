@@ -16,66 +16,57 @@
 #include "lua.h"
 
 
-/* tags for values visible from Lua */
-#define LAST_TAG	LUA_TTHREAD
 
-#define NUM_TAGS	(LAST_TAG+1)
+#define LAST_TAG	LUA_TTHREAD       /* lua中可见的类型标记 */
+#define NUM_TAGS	(LAST_TAG+1)      /* 标记的数量 */
 
-
-/*
-** Extra tags for non-values
-*/
+/* 扩展的标记为了一些没有值的类型 */
 #define LUA_TPROTO      (LAST_TAG+1)
 #define LUA_TUPVAL      (LAST_TAG+2)
-#define LUA_TDEADKEY	(LAST_TAG+3)
-
+#define LUA_TDEADKEY    (LAST_TAG+3)
 
 /* 可回收对象联合体 */
 typedef union GCObject GCObject;
 
-/* 所有可回收内存对象的共用头
+/* 所有可回收内存对象的共用头 
+ * next 下一个对象的指针
+ * tt 类型
+ * marked 标记
  */
 #define CommonHeader	GCObject *next; lu_byte tt; lu_byte marked
 
-/*
-** Common header in struct form
-*/
+/* 可回收对象公共头的结构形式 */
 typedef struct GCheader {
   CommonHeader;
 } GCheader;
 
-/*
-** Union of all Lua values
-*/
+/* 所有lua值的联合体 */
 typedef union {
-  GCObject *gc;
-  void *p;
-  lua_Number n;
-  int b;
+  GCObject *gc;       /* 可回收对象 */
+  void *p;            /* 轻型用户数据 */
+  lua_Number n;       /* 实数 */
+  int b;              /* 布尔 */
 } Value;
 
-
-/*
-** Tagged Values
-*/
-
+/* lua类型的区域 */
 #define TValuefields	Value value; int tt
-
 typedef struct lua_TValue {
   TValuefields;
 } TValue;
 
 
-/* Macros to test type */
-#define ttisnil(o)	(ttype(o) == LUA_TNIL)
-#define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)
-#define ttisstring(o)	(ttype(o) == LUA_TSTRING)
-#define ttistable(o)	(ttype(o) == LUA_TTABLE)
-#define ttisfunction(o)	(ttype(o) == LUA_TFUNCTION)
-#define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)
-#define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)
-#define ttisthread(o)	(ttype(o) == LUA_TTHREAD)
-#define ttislightuserdata(o)	(ttype(o) == LUA_TLIGHTUSERDATA)
+/*
+ * 测试对象的宏
+ */
+#define ttisnil(o)	(ttype(o) == LUA_TNIL)                      /* 当前值是否是空的 */
+#define ttisnumber(o)	(ttype(o) == LUA_TNUMBER)                 /* 当前值是实数 */
+#define ttisstring(o)	(ttype(o) == LUA_TSTRING)                 /* 当前值是字符串 */
+#define ttistable(o)	(ttype(o) == LUA_TTABLE)                  /* 当前值是表 */
+#define ttisfunction(o)	(ttype(o) == LUA_TFUNCTION)             /* 当前值是函数 */
+#define ttisboolean(o)	(ttype(o) == LUA_TBOOLEAN)              /* 当前值是布尔值 */
+#define ttisuserdata(o)	(ttype(o) == LUA_TUSERDATA)             /* 当前值是用户自定义类型 */
+#define ttisthread(o)	(ttype(o) == LUA_TTHREAD)                 /* 当前值是线程 */
+#define ttislightuserdata(o)	(ttype(o) == LUA_TLIGHTUSERDATA)  /* 当前值是轻型数据，不是可回收对象 */
 
 /* 访问值所需的宏 */
 #define ttype(o)	((o)->tt)
@@ -93,9 +84,7 @@ typedef struct lua_TValue {
 
 #define l_isfalse(o)	(ttisnil(o) || (ttisboolean(o) && bvalue(o) == 0))
 
-/*
-** for internal debug only
-*/
+/* 仅为内部调试支持 */
 #define checkconsistency(obj) \
   lua_assert(!iscollectable(obj) || (ttype(obj) == (obj)->value.gc->gch.tt))
 
@@ -104,7 +93,7 @@ typedef struct lua_TValue {
   ((ttype(obj) == (obj)->value.gc->gch.tt) && !isdead(g, (obj)->value.gc)))
 
 
-/* Macros to set values */
+/* 设置值的宏 */
 #define setnilvalue(obj) ((obj)->tt=LUA_TNIL)
 
 #define setnvalue(obj,x) \
@@ -115,6 +104,8 @@ typedef struct lua_TValue {
 
 #define setbvalue(obj,x) \
   { TValue *i_o=(obj); i_o->value.b=(x); i_o->tt=LUA_TBOOLEAN; }
+
+/* 以下是设置可回收对象 */
 
 #define setsvalue(L,obj,x) \
   { TValue *i_o=(obj); \
@@ -146,9 +137,7 @@ typedef struct lua_TValue {
     i_o->value.gc=cast(GCObject *, (x)); i_o->tt=LUA_TPROTO; \
     checkliveness(G(L),i_o); }
 
-
-
-
+/* 将一个对象的值设置到另外一个 */
 #define setobj(L,obj1,obj2) \
   { const TValue *o2=(obj2); TValue *o1=(obj1); \
     o1->value = o2->value; o1->tt=o2->tt; \
@@ -156,8 +145,8 @@ typedef struct lua_TValue {
 
 
 /*
-** different types of sets, according to destination
-*/
+ * 不同类型的设置
+ */
 
 /* from stack to (same) stack */
 #define setobjs2s	setobj
@@ -184,12 +173,12 @@ typedef TValue *StkId;  /* 指向栈元素 */
 
 /* 字符串头指针 */
 typedef union TString {
-  L_Umaxalign dummy;  /* ensures maximum alignment for strings */
+  L_Umaxalign dummy;  /* 最大的对齐粒度 */
   struct {
     CommonHeader;
-    lu_byte reserved;
-    unsigned int hash;
-    size_t len;
+    lu_byte reserved;   /* lua的保留值，这里为1 */
+    unsigned int hash;  /* 字符串hash值 */
+    size_t len;         /* 字符串长度 */
   } tsv;
 } TString;
 
@@ -197,15 +186,14 @@ typedef union TString {
 #define getstr(ts)      cast(const char *, (ts) + 1)
 #define svalue(o)       getstr(rawtsvalue(o))
 
-
-
+/* 用户自定义的数据 */
 typedef union Udata {
-  L_Umaxalign dummy;  /* ensures maximum alignment for `local' udata */
+  L_Umaxalign dummy;  /* 最大的对齐粒度 */
   struct {
     CommonHeader;
-    struct Table *metatable;
-    struct Table *env;
-    size_t len;
+    struct Table *metatable;    /* 用户数据元操作表 */
+    struct Table *env;          /* 环境表 */
+    size_t len;                 /* 用户数据长度 */
   } uv;
 } Udata;
 
@@ -239,38 +227,36 @@ typedef struct Proto {
 
 /* masks for new-style vararg */
 #define VARARG_HASARG     1
-#define VARARG_ISVARARG		2
+#define VARARG_ISVARARG		2     /* 是多参数函数 */
 #define VARARG_NEEDSARG		4
 
-
+/* 局部变量 */
 typedef struct LocVar {
-  TString *varname;
-  int startpc;  /* first point where variable is active */
-  int endpc;    /* first point where variable is dead */
+  TString *varname;         /* 变量名称 */
+  int startpc;              /* 变量诞生的指令的位置 */
+  int endpc;                /* 变量死亡的指令的位置 */
 } LocVar;
-
-
 
 /* Upvalues
  */
 typedef struct UpVal {
   CommonHeader;
-  TValue *v;  /* points to stack or to its own value */
+  TValue *v;                /* 指向堆栈活着它自身的值 */
   union {
-    TValue value;  /* the value (when closed) */
-    struct {  /* double linked list (when open) */
+    TValue value;           /* 当关闭时，upvalue的值 */
+    struct {                /* 当upvalue存在时的链表 */
       struct UpVal *prev;
       struct UpVal *next;
     } l;
   } u;
 } UpVal;
 
-
-/*
- * 闭包
+/* 闭包的头结构 
+ * isC 是C函数
+ * nupvalues upvalue的数量
+ * gclist 可回收对象的链表
+ * env 当前环境变量
  */
-
-/* 闭包的头结构 */
 #define ClosureHeader \
 	CommonHeader; lu_byte isC; lu_byte nupvalues; GCObject *gclist; \
 	struct Table *env
@@ -302,21 +288,22 @@ typedef union Closure {
 
 
 /*
-** Tables
-*/
+ * hash表
+ */
 
+/* hash键 */
 typedef union TKey {
   struct {
     TValuefields;
-    struct Node *next;  /* for chaining */
+    struct Node *next;        /* 指向下一个节点 */
   } nk;
-  TValue tvk;
+  TValue tvk;                 /* 键指向的值 */
 } TKey;
 
-
+/* 哈希节点 */
 typedef struct Node {
-  TValue i_val;
-  TKey i_key;
+  TValue i_val;               /* 值 */
+  TKey i_key;                 /* 键 */
 } Node;
 
 /* 哈希表 */

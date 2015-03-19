@@ -11,6 +11,11 @@
 #include <limits.h>
 #include <stddef.h>
 
+/* 对COCOS的支持
+ */
+#define COCOS_LUA   1
+
+
 /*
 ** ==================================================================
 ** Search for "@@" to find all configurable definitions.
@@ -206,7 +211,11 @@
 @* of a function in debug information.
 ** CHANGE it if you want a different size.
 */
+#ifdef COCOS_LUA
+#define LUA_IDSIZE	240
+#else
 #define LUA_IDSIZE	60
+#endif
 
 
 /*
@@ -478,6 +487,7 @@
 @@ LUAI_MAXVARS is the maximum number of local variables per function
 @* (must be smaller than 250).
 */
+/* 每个函数的最大的局部变量数 */
 #define LUAI_MAXVARS		200
 
 
@@ -762,10 +772,6 @@ union luai_Cast { double l_d; long l_l; };
 ** without modifying the main part of the file.
 */
 #define UNUSED(x)           (void)(x)
-
-/* 对COCOS的支持
- */
-#define COCOS_LUA   1
 
 #endif
 

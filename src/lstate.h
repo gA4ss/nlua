@@ -152,7 +152,7 @@ struct lua_State {
   CallInfo *base_ci;                  /* CallInfo队列 */
   int stacksize;
   int size_ci;                        /* `base_ci'队列的长度 */
-  unsigned short nCcalls;             /* number of nested C calls */
+  unsigned short nCcalls;             /* C调用次数 */
   unsigned short baseCcalls;          /* nested C calls when resuming coroutine */
   lu_byte hookmask;
   lu_byte allowhook;

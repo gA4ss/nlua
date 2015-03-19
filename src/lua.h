@@ -43,9 +43,9 @@
 #define LUA_ERRERR    5     /* ... */
 
 
-typedef struct lua_State lua_State;
+typedef struct lua_State lua_State;                 /* lua线程状态 */
 
-typedef int (*lua_CFunction) (lua_State *L);
+typedef int (*lua_CFunction) (lua_State *L);        /* C函数的原型 */
 
 
 /*

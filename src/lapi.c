@@ -171,9 +171,14 @@ LUA_API int lua_gettop (lua_State *L) {
   return cast_int(L->top - L->base);
 }
 
-
+/* 直接对栈进行设定
+ * idx 是 栈索引
+ */
 LUA_API void lua_settop (lua_State *L, int idx) {
   lua_lock(L);
+  /* 如果idx大于0，则从idx开始到栈顶都设置为0
+   * 并且栈顶到idx处
+   */
   if (idx >= 0) {
     api_check(L, idx <= L->stack_last - L->base);
     while (L->top < L->base + idx)
@@ -181,13 +186,16 @@ LUA_API void lua_settop (lua_State *L, int idx) {
     L->top = L->base + idx;
   }
   else {
+    /* 否则直接设置栈顶到idx */
     api_check(L, -(idx+1) <= (L->top - L->base));
     L->top += idx+1;  /* `subtract' index (index is negative) */
   }
   lua_unlock(L);
 }
 
-
+/* 移除栈索引
+ * idx 栈的索引
+ */
 LUA_API void lua_remove (lua_State *L, int idx) {
   StkId p;
   lua_lock(L);
@@ -810,8 +818,11 @@ static void f_call (lua_State *L, void *ud) {
   luaD_call(L, c->func, c->nresults);
 }
 
-
-
+/* 调用
+ * nargs 参数数量
+ * nresults 结果数量
+ * errfunc 错误函数索引
+ */
 LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
   struct CallS c;
   int status;
@@ -826,7 +837,7 @@ LUA_API int lua_pcall (lua_State *L, int nargs, int nresults, int errfunc) {
     api_checkvalidindex(L, o);
     func = savestack(L, o);
   }
-  c.func = L->top - (nargs+1);  /* function to be called */
+  c.func = L->top - (nargs+1);  /* 得到要执行的函数 */
   c.nresults = nresults;
   status = luaD_pcall(L, f_call, &c, savestack(L, c.func), func);
   adjustresults(L, nresults);

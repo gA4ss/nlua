@@ -184,7 +184,7 @@ void luaK_patchtohere (FuncState *fs, int list) {
   luaK_concat(fs, &fs->jpc, list);
 }
 
-
+/* 写入一条concat指令 */
 void luaK_concat (FuncState *fs, int *l1, int l2) {
   if (l2 == NO_JUMP) return;
   else if (*l1 == NO_JUMP)
@@ -721,7 +721,10 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
   }
 }
 
-
+/* fs 当前函数状态
+ * op 当前二元运算符号
+ * v 当前表达式描述
+ */
 void luaK_infix (FuncState *fs, BinOpr op, expdesc *v) {
   switch (op) {
     case OPR_AND: {

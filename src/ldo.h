@@ -27,14 +27,12 @@
 #define saveci(L,p)		((char *)(p) - (char *)L->base_ci)
 #define restoreci(L,n)		((CallInfo *)((char *)L->base_ci + (n)))
 
+/* luaD_precall的结果 */
+#define PCRLUA		0	/* 初始化调用一个Lua函数 */
+#define PCRC		1	/* 是否是调用一个C函数 */
+#define PCRYIELD	2	/* C函数挂起 */
 
-/* results from luaD_precall */
-#define PCRLUA		0	/* initiated a call to a Lua function */
-#define PCRC		1	/* did a call to a C function */
-#define PCRYIELD	2	/* C funtion yielded */
-
-
-/* type of protected functions, to be ran by `runprotected' */
+/* `runprotected`的原始函数接口 */
 typedef void (*Pfunc) (lua_State *L, void *ud);
 
 LUAI_FUNC int luaD_protectedparser (lua_State *L, ZIO *z, const char *name);

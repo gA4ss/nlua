@@ -23,7 +23,7 @@
 #include "lvm.h"
 
 
-
+/* 定义一个空对象 */
 const TValue luaO_nilobject_ = {{NULL}, LUA_TNIL};
 
 
@@ -32,8 +32,9 @@ const TValue luaO_nilobject_ = {{NULL}, LUA_TNIL};
 ** (eeeeexxx), where the real value is (1xxx) * 2^(eeeee - 1) if
 ** eeeee != 0 and (xxx) otherwise.
 */
+/* 转换整型到浮点 */
 int luaO_int2fb (unsigned int x) {
-  int e = 0;  /* expoent */
+  int e = 0;  /* 指数位 */
   while (x >= 16) {
     x = (x+1) >> 1;
     e++;
@@ -43,14 +44,14 @@ int luaO_int2fb (unsigned int x) {
 }
 
 
-/* converts back */
+/* 浮点转换到整型 */
 int luaO_fb2int (int x) {
   int e = (x >> 3) & 31;
   if (e == 0) return x;
   else return ((x & 7)+8) << (e - 1);
 }
 
-
+/* 求以2为底的对数 */
 int luaO_log2 (unsigned int x) {
   static const lu_byte log_2[256] = {
     0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,5,
@@ -68,7 +69,7 @@ int luaO_log2 (unsigned int x) {
 
 }
 
-
+/* 判断两个TValue是否相等 */
 int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
   if (ttype(t1) != ttype(t2)) return 0;
   else switch (ttype(t1)) {
@@ -86,7 +87,7 @@ int luaO_rawequalObj (const TValue *t1, const TValue *t2) {
   }
 }
 
-
+/* 将字符串s转换为实数 */
 int luaO_str2d (const char *s, lua_Number *result) {
   char *endptr;
   *result = lua_str2number(s, &endptr);
@@ -99,8 +100,7 @@ int luaO_str2d (const char *s, lua_Number *result) {
   return 1;
 }
 
-
-
+/* 压入一个字符串到栈顶 */
 static void pushstr (lua_State *L, const char *str) {
   setsvalue2s(L, L->top, luaS_new(L, str));
   incr_top(L);
@@ -178,16 +178,20 @@ const char *luaO_pushfstring (lua_State *L, const char *fmt, ...) {
   return msg;
 }
 
-
+/* 
+ * out 输出缓存
+ * source 源代码名称
+ * bufflen 缓存区长度
+ */
 void luaO_chunkid (char *out, const char *source, size_t bufflen) {
   if (*source == '=') {
-    strncpy(out, source+1, bufflen);  /* remove first char */
-    out[bufflen-1] = '\0';  /* ensures null termination */
+    strncpy(out, source+1, bufflen);        /* 移除第一个字符 */
+    out[bufflen-1] = '\0';                  /* 提交空字符 */
   }
-  else {  /* out = "source", or "...source" */
+  else {                        /* out = "source", 或者 "...source" */
     if (*source == '@') {
       size_t l;
-      source++;  /* skip the `@' */
+      source++;  /* 跳过 `@' */
       bufflen -= sizeof(" '...' ");
       l = strlen(source);
       strcpy(out, "");

@@ -30,7 +30,9 @@ typedef enum BinOpr {
   OPR_NOBINOPR
 } BinOpr;
 
-/* 一元操作符号 */
+/* 一元操作符号 
+ * OPR_NOUNOPR 表示非一元运算符
+ */
 typedef enum UnOpr { OPR_MINUS, OPR_NOT, OPR_LEN, OPR_NOUNOPR } UnOpr;
 
 #define getcode(fs,e)	((fs)->f->code[(e)->u.s.info])

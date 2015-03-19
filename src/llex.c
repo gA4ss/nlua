@@ -23,17 +23,12 @@
 #include "ltable.h"
 #include "lzio.h"
 
-
-
+/* 下一个字符 */
 #define next(ls) (ls->current = zgetc(ls->z))
-
-
-
-
+/* 当前是否读到换行符号 */
 #define currIsNewline(ls)	(ls->current == '\n' || ls->current == '\r')
 
-
-/* ORDER RESERVED */
+/* 词法标记字符串 */
 const char *const luaX_tokens [] = {
     "and", "break", "do", "else", "elseif",
     "end", "false", "for", "function", "if",
@@ -44,37 +39,40 @@ const char *const luaX_tokens [] = {
     NULL
 };
 
-
+/* 保存当前字符，并且读取下一个 */
 #define save_and_next(ls) (save(ls, ls->current), next(ls))
 
-
+/* 保存字符c到缓存 */
 static void save (LexState *ls, int c) {
   Mbuffer *b = ls->buff;
+  
+  /* 如果当前的缓冲超标,则重新分配内存 */
   if (b->n + 1 > b->buffsize) {
     size_t newsize;
     if (b->buffsize >= MAX_SIZET/2)
       luaX_lexerror(ls, "lexical element too long", 0);
     newsize = b->buffsize * 2;
-    luaZ_resizebuffer(ls->L, b, newsize);
+    luaZ_resizebuffer(ls->L, b, newsize);     /* 重新分配内存 */
   }
-  b->buffer[b->n++] = cast(char, c);
+  b->buffer[b->n++] = cast(char, c);          /* 保存新字符 */
 }
 
-
+/* 词法分析初始化 */
 void luaX_init (lua_State *L) {
   int i;
+  /* 遍历保留字 */
   for (i=0; i<NUM_RESERVED; i++) {
     TString *ts = luaS_new(L, luaX_tokens[i]);
-    luaS_fix(ts);  /* reserved words are never collected */
+    luaS_fix(ts);  /* 设置为不进行内存回收 */
     lua_assert(strlen(luaX_tokens[i])+1 <= TOKEN_LEN);
-    ts->tsv.reserved = cast_byte(i+1);  /* reserved word */
+    ts->tsv.reserved = cast_byte(i+1);  /* 表明是保留字 */
   }
 }
 
 
 #define MAXSRC          80
 
-
+/* 标记转字符串 */
 const char *luaX_token2str (LexState *ls, int token) {
   if (token < FIRST_RESERVED) {
     lua_assert(token == cast(unsigned char, token));
@@ -85,7 +83,7 @@ const char *luaX_token2str (LexState *ls, int token) {
     return luaX_tokens[token-FIRST_RESERVED];
 }
 
-
+/* 保存标记的字面值 */
 static const char *txtToken (LexState *ls, int token) {
   switch (token) {
     case TK_NAME:
@@ -98,34 +96,39 @@ static const char *txtToken (LexState *ls, int token) {
   }
 }
 
-
+/* 词法分析错误 */
 void luaX_lexerror (LexState *ls, const char *msg, int token) {
   char buff[MAXSRC];
-  luaO_chunkid(buff, getstr(ls->source), MAXSRC);
+  luaO_chunkid(buff, getstr(ls->source), MAXSRC);   /* 转换源代码名称 */
   msg = luaO_pushfstring(ls->L, "%s:%d: %s", buff, ls->linenumber, msg);
+  /* 如果是标记出错，则压入标记名称 */
   if (token)
     luaO_pushfstring(ls->L, "%s near " LUA_QS, msg, txtToken(ls, token));
   luaD_throw(ls->L, LUA_ERRSYNTAX);
 }
 
-
+/* 语法错误 */
 void luaX_syntaxerror (LexState *ls, const char *msg) {
   luaX_lexerror(ls, msg, ls->t.token);
 }
 
-
+/* 新建字符串
+ * ls 词法分析指针
+ * str 要新建的字符串
+ * l 字符串长度
+ */
 TString *luaX_newstring (LexState *ls, const char *str, size_t l) {
   lua_State *L = ls->L;
   TString *ts = luaS_newlstr(L, str, l);
   TValue *o = luaH_setstr(L, ls->fs->h, ts);  /* entry for `str' */
   if (ttisnil(o)) {
-    setbvalue(o, 1);  /* make sure `str' will not be collected */
+    setbvalue(o, 1);  /* 标记`str`将不会被回收 */
     luaC_checkGC(L);
   }
   return ts;
 }
 
-
+/* 增加行号 */
 static void inclinenumber (LexState *ls) {
   int old = ls->current;
   lua_assert(currIsNewline(ls));
@@ -136,11 +139,16 @@ static void inclinenumber (LexState *ls) {
     luaX_syntaxerror(ls, "chunk has too many lines");
 }
 
-
+/* 设置词法输入流
+ * L lua线程状态指针
+ * ls 词法分析状态指针
+ * z IO输入指针
+ * source 源代码名称
+ */
 void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
   ls->decpoint = '.';
   ls->L = L;
-  ls->lookahead.token = TK_EOS;  /* no look-ahead token */
+  ls->lookahead.token = TK_EOS;  /* 末尾标记 */
   ls->z = z;
   ls->fs = NULL;
   ls->linenumber = 1;
@@ -154,12 +162,13 @@ void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source) {
 
 /*
 ** =======================================================
-** LEXICAL ANALYZER
+** 词法分析
 ** =======================================================
 */
 
-
-
+/* 如果当前的字符没有在set中则返回0
+ * 否则保存当前字符并读取下一个字符然后返回1
+ */
 static int check_next (LexState *ls, const char *set) {
   if (!strchr(set, ls->current))
     return 0;
@@ -167,7 +176,7 @@ static int check_next (LexState *ls, const char *set) {
   return 1;
 }
 
-
+/* 将当前缓存中的所有字符from替换为to字符 */
 static void buffreplace (LexState *ls, char from, char to) {
   size_t n = luaZ_bufflen(ls->buff);
   char *p = luaZ_buffer(ls->buff);
@@ -196,46 +205,52 @@ static void trydecpoint (LexState *ls, SemInfo *seminfo) {
   }
 }
 
-
-/* LUA_NUMBER */
+/* 读取实数 */
 static void read_numeral (LexState *ls, SemInfo *seminfo) {
   lua_assert(isdigit(ls->current));
   do {
     save_and_next(ls);
-  } while (isdigit(ls->current) || ls->current == '.');
-  if (check_next(ls, "Ee"))  /* `E'? */
-    check_next(ls, "+-");  /* optional exponent sign */
+  } while (isdigit(ls->current) || ls->current == '.');/* 当前字符是数字或者`.` */
+  if (check_next(ls, "Ee"))   /* 检查当前字面值中包含指数字符E或者e */
+    check_next(ls, "+-");     /* 可选的指数符号 */
   while (isalnum(ls->current) || ls->current == '_')
     save_and_next(ls);
   save(ls, '\0');
-  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
-  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* format error? */
+  buffreplace(ls, '.', ls->decpoint);       /* `.`的替换，为啥lua这么和`.`过不去 */
+  /* 读取实数 */
+  if (!luaO_str2d(luaZ_buffer(ls->buff), &seminfo->r))  /* 格式错误? */
     trydecpoint(ls, seminfo); /* try to update decimal point separator */
 }
 
-
+/* 跳过空格 */
 static int skip_sep (LexState *ls) {
   int count = 0;
   int s = ls->current;
+  /* s必须是`[`或者`]` */
   lua_assert(s == '[' || s == ']');
   save_and_next(ls);
+  /* 读取连续的 `=` 字符 */
   while (ls->current == '=') {
     save_and_next(ls);
     count++;
   }
+  
+  /* ]=====] 或者 [=====[ 返回读取了多少个个=
+   * 如果不相等则返回第一个[或者]的位置
+   */
   return (ls->current == s) ? count : (-count) - 1;
 }
 
-
+/* 读取长字符串 */
 static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
   int cont = 0;
-  (void)(cont);  /* avoid warnings when `cont' is not used */
-  save_and_next(ls);  /* skip 2nd `[' */
-  if (currIsNewline(ls))  /* string starts with a newline? */
-    inclinenumber(ls);  /* skip it */
+  (void)(cont);           /* UNUSED */
+  save_and_next(ls);      /* 跳过第二个 `[' */
+  if (currIsNewline(ls))  /* 字符串从新行开始 */
+    inclinenumber(ls);    /* 增加行数 */
   for (;;) {
     switch (ls->current) {
-      case EOZ:
+      case EOZ:           /* 读取到末尾符号，出错 */
         luaX_lexerror(ls, (seminfo) ? "unfinished long string" :
                                    "unfinished long comment", TK_EOS);
         break;  /* to avoid warnings */
@@ -267,21 +282,25 @@ static void read_long_string (LexState *ls, SemInfo *seminfo, int sep) {
       case '\r': {
         save(ls, '\n');
         inclinenumber(ls);
+        /* 字面值指针为空，清空缓存 */
         if (!seminfo) luaZ_resetbuffer(ls->buff);  /* avoid wasting space */
         break;
       }
       default: {
+        /* 如果字面值不为空，则保存字符 */
         if (seminfo) save_and_next(ls);
         else next(ls);
       }
     }
   } endloop:
+  
+  /* 保存字面值字符串 */
   if (seminfo)
     seminfo->ts = luaX_newstring(ls, luaZ_buffer(ls->buff) + (2 + sep),
                                      luaZ_bufflen(ls->buff) - 2*(2 + sep));
 }
 
-
+/* 读取字符串 */
 static void read_string (LexState *ls, int del, SemInfo *seminfo) {
   save_and_next(ls);
   while (ls->current != del) {
@@ -337,31 +356,34 @@ static void read_string (LexState *ls, int del, SemInfo *seminfo) {
                                    luaZ_bufflen(ls->buff) - 2);
 }
 
-
+/* 词法分析
+ * ls 词法分析状态指针
+ * seminfo 字面值指针m
+ */
 static int llex (LexState *ls, SemInfo *seminfo) {
   luaZ_resetbuffer(ls->buff);
   for (;;) {
     switch (ls->current) {
       case '\n':
-      case '\r': {
+      case '\r': {  /* 换行 */
         inclinenumber(ls);
         continue;
       }
       case '-': {
         next(ls);
-        if (ls->current != '-') return '-';
-        /* else is a comment */
+        if (ls->current != '-') return '-'; /* 单目运算符号 */
         next(ls);
-        if (ls->current == '[') {
+        /* 注释以 `--[` 开头 */
+        if (ls->current == '[') {/* 注释 */
           int sep = skip_sep(ls);
           luaZ_resetbuffer(ls->buff);  /* `skip_sep' may dirty the buffer */
           if (sep >= 0) {
-            read_long_string(ls, NULL, sep);  /* long comment */
+            read_long_string(ls, NULL, sep);  /* 长注释 */
             luaZ_resetbuffer(ls->buff);
             continue;
           }
         }
-        /* else short comment */
+        /* 短注释 */
         while (!currIsNewline(ls) && ls->current != EOZ)
           next(ls);
         continue;
@@ -444,25 +466,27 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         else {
           int c = ls->current;
           next(ls);
-          return c;  /* single-char tokens (+ - / ...) */
+          return c;  /* 单字符标记 (+ - / ...) */
         }
       }
     }
   }
 }
 
-
+/* 读取下一个标记 */
 void luaX_next (LexState *ls) {
+  /* 最后的行号设定 */
   ls->lastline = ls->linenumber;
-  if (ls->lookahead.token != TK_EOS) {  /* is there a look-ahead token? */
-    ls->t = ls->lookahead;  /* use this one */
-    ls->lookahead.token = TK_EOS;  /* and discharge it */
+  if (ls->lookahead.token != TK_EOS) {  /* 向前看字符 */
+    ls->t = ls->lookahead;              /* 使用它 */
+    ls->lookahead.token = TK_EOS;       /* 丢弃向前看 */
   }
+  /* 需要获取新标记 */
   else
     ls->t.token = llex(ls, &ls->t.seminfo);  /* read next token */
 }
 
-
+/* 向前看一个标记 */
 void luaX_lookahead (LexState *ls) {
   lua_assert(ls->lookahead.token == TK_EOS);
   ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);

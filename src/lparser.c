@@ -28,21 +28,23 @@
 
 
 #define hasmultret(k)		((k) == VCALL || (k) == VVARARG)
-
+/* 获取局部变量
+ * fs 当前分析的函数状态
+ * i 当前活动局部变量的索引
+ */
 #define getlocvar(fs, i)	((fs)->f->locvars[(fs)->actvar[i]])
 
 #define luaY_checklimit(fs,v,l,m)	if ((v)>(l)) errorlimit(fs,l,m)
 
-
 /*
-** nodes for block list (list of active blocks)
-*/
+ * 代码块
+ */
 typedef struct BlockCnt {
-  struct BlockCnt *previous;  /* chain */
-  int breaklist;  /* list of jumps out of this loop */
-  lu_byte nactvar;  /* # active locals outside the breakable structure */
-  lu_byte upval;  /* true if some variable in the block is an upvalue */
-  lu_byte isbreakable;  /* true if `block' is a loop */
+  struct BlockCnt *previous;  /* 节点 */
+  int breaklist;              /* 跳出点列表在这个循环中 */
+  lu_byte nactvar;            /* # active locals outside the breakable structure */
+  lu_byte upval;              /* true时，这个代码块有upvalue值 */
+  lu_byte isbreakable;        /* true时，这个块是一个循环 */
 } BlockCnt;
 
 
@@ -53,7 +55,7 @@ typedef struct BlockCnt {
 static void chunk (LexState *ls);
 static void expr (LexState *ls, expdesc *v);
 
-
+/* 保存当前的词法标记字面值 */
 static void anchor_token (LexState *ls) {
   if (ls->t.token == TK_NAME || ls->t.token == TK_STRING) {
     TString *ts = ls->t.seminfo.ts;
@@ -61,7 +63,9 @@ static void anchor_token (LexState *ls) {
   }
 }
 
-
+/* 出错异常
+ * token 出错的标记
+ */
 static void error_expected (LexState *ls, int token) {
   luaX_syntaxerror(ls,
       luaO_pushfstring(ls->L, LUA_QS " expected", luaX_token2str(ls, token)));
@@ -76,7 +80,9 @@ static void errorlimit (FuncState *fs, int limit, const char *what) {
   luaX_lexerror(fs->ls, msg, 0);
 }
 
-
+/* 测试下一个标记是否是c指定的
+ * 如果是则读取下一个标记
+ */
 static int testnext (LexState *ls, int c) {
   if (ls->t.token == c) {
     luaX_next(ls);
@@ -85,7 +91,7 @@ static int testnext (LexState *ls, int c) {
   else return 0;
 }
 
-
+/* 检查当前词法标记 如果不是c 则报错 */
 static void check (LexState *ls, int c) {
   if (ls->t.token != c)
     error_expected(ls, c);
@@ -100,12 +106,19 @@ static void checknext (LexState *ls, int c) {
 #define check_condition(ls,c,msg)	{ if (!(c)) luaX_syntaxerror(ls, msg); }
 
 
-
+/* 检查匹配
+ * ls 词法分析指针
+ * what 要匹配的标记
+ * who 谁要匹配这个当前标记
+ * where 检查所在的行号
+ */
 static void check_match (LexState *ls, int what, int who, int where) {
+  /* 如果当前的标记不是what */
   if (!testnext(ls, what)) {
+    /* 如果行号匹配输出错误信息 */
     if (where == ls->linenumber)
       error_expected(ls, what);
-    else {
+    else {  /* 行号不匹配 */
       luaX_syntaxerror(ls, luaO_pushfstring(ls->L,
              LUA_QS " expected (to close " LUA_QS " at line %d)",
               luaX_token2str(ls, what), luaX_token2str(ls, who), where));
@@ -172,7 +185,9 @@ static void adjustlocalvars (LexState *ls, int nvars) {
   }
 }
 
-
+/* 移除一个代码块的活动局部变量
+ * 将当前函数状态的活动变量减少到tolevel的值
+ */
 static void removevars (LexState *ls, int tolevel) {
   FuncState *fs = ls->fs;
   while (fs->nactvar > tolevel)
@@ -244,7 +259,7 @@ static int singlevaraux (FuncState *fs, TString *n, expdesc *var, int base) {
   }
 }
 
-
+/* 单个变量 */
 static void singlevar (LexState *ls, expdesc *var) {
   TString *varname = str_checkname(ls);
   FuncState *fs = ls->fs;
@@ -272,37 +287,45 @@ static void adjust_assign (LexState *ls, int nvars, int nexps, expdesc *e) {
   }
 }
 
-
+/* 增加调用计数 */
 static void enterlevel (LexState *ls) {
   if (++ls->L->nCcalls > LUAI_MAXCCALLS)
 	luaX_lexerror(ls, "chunk has too many syntax levels", 0);
 }
 
-
+/* 离开调用 */
 #define leavelevel(ls)	((ls)->L->nCcalls--)
 
-
+/* 进入一个新的代码块 */
 static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
   bl->breaklist = NO_JUMP;
-  bl->isbreakable = isbreakable;
+  bl->isbreakable = isbreakable;      /* 可跳出 */
   bl->nactvar = fs->nactvar;
   bl->upval = 0;
+  /* 链接节点 */
   bl->previous = fs->bl;
   fs->bl = bl;
+  /* 当前空闲的寄存器值索引就是当前活动变量的总数也就是下一个活动变量索引 */
   lua_assert(fs->freereg == fs->nactvar);
 }
 
-
+/* 离开代码块 */
 static void leaveblock (FuncState *fs) {
   BlockCnt *bl = fs->bl;
+  /* 恢复代码块节点 */
   fs->bl = bl->previous;
+  
+  /* 移除一个代码块的局部变量 */
   removevars(fs->ls, bl->nactvar);
+  
+  /* 如果这个代码块有upvalue则关闭 */
   if (bl->upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
-  /* a block either controls scope or breaks (never both) */
+  /* 运行到这里，代码块不能是不可退出的并且没有upvalue */
   lua_assert(!bl->isbreakable || !bl->upval);
+  /* 当前代码块与当前函数的总活动变量相等，因为运行了removevars函数 */
   lua_assert(bl->nactvar == fs->nactvar);
-  fs->freereg = fs->nactvar;  /* free registers */
+  fs->freereg = fs->nactvar;  /* 释放寄存器 */
   luaK_patchtohere(fs, bl->breaklist);
 }
 
@@ -324,18 +347,18 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   }
 }
 
-
+/* 打开函数指针 */
 static void open_func (LexState *ls, FuncState *fs) {
   lua_State *L = ls->L;
-  Proto *f = luaF_newproto(L);
+  Proto *f = luaF_newproto(L);      /* 分配新的函数原型 */
   fs->f = f;
-  fs->prev = ls->fs;  /* linked list of funcstates */
+  fs->prev = ls->fs;                /* 函数状态列表 */
   fs->ls = ls;
   fs->L = L;
   ls->fs = fs;
   fs->pc = 0;
   fs->lasttarget = -1;
-  fs->jpc = NO_JUMP;
+  fs->jpc = NO_JUMP;                /* 无jmp指令 */
   fs->freereg = 0;
   fs->nk = 0;
   fs->np = 0;
@@ -343,28 +366,34 @@ static void open_func (LexState *ls, FuncState *fs) {
   fs->nactvar = 0;
   fs->bl = NULL;
   f->source = ls->source;
-  f->maxstacksize = 2;  /* registers 0/1 are always valid */
-  fs->h = luaH_new(L, 0, 0);
-  /* anchor table of constants and prototype (to avoid being collected) */
-  sethvalue2s(L, L->top, fs->h);
+  f->maxstacksize = 2;              /* 函数原型与表所占 */
+  fs->h = luaH_new(L, 0, 0);        /* 哈希表 */
+  sethvalue2s(L, L->top, fs->h);    /* 将函数的表设定到栈顶 */
   incr_top(L);
-  setptvalue2s(L, L->top, f);
+  setptvalue2s(L, L->top, f);       /* 将当前函数原型指针设置到栈顶 */
   incr_top(L);
+  /* top ----->
+   * f 函数原型
+   * fs->h 哈希表
+   * -
+   * -
+   * -
+   */
 }
 
-
+/* 关闭一个函数 */
 static void close_func (LexState *ls) {
   lua_State *L = ls->L;
   FuncState *fs = ls->fs;
   Proto *f = fs->f;
   removevars(ls, 0);
-  luaK_ret(fs, 0, 0);  /* final return */
+  luaK_ret(fs, 0, 0);       /* 最终的返回 */
   luaM_reallocvector(L, f->code, f->sizecode, fs->pc, Instruction);
-  f->sizecode = fs->pc;
+  f->sizecode = fs->pc;     /* 代码长度就是当前的pc指针值 */
   luaM_reallocvector(L, f->lineinfo, f->sizelineinfo, fs->pc, int);
   f->sizelineinfo = fs->pc;
   luaM_reallocvector(L, f->k, f->sizek, fs->nk, TValue);
-  f->sizek = fs->nk;
+  f->sizek = fs->nk;        /* 常量的个数 */
   luaM_reallocvector(L, f->p, f->sizep, fs->np, Proto *);
   f->sizep = fs->np;
   luaM_reallocvector(L, f->locvars, f->sizelocvars, fs->nlocvars, LocVar);
@@ -373,27 +402,34 @@ static void close_func (LexState *ls) {
   f->sizeupvalues = f->nups;
   lua_assert(luaG_checkcode(L, f));
   lua_assert(fs->bl == NULL);
+  /* 恢复上一层函数 */
   ls->fs = fs->prev;
-  /* last token read was anchored in defunct function; must reanchor it */
+  /* 读取最后一个标记的字面值 */
   if (fs) anchor_token(ls);
-  L->top -= 2;  /* remove table and prototype from the stack */
+  L->top -= 2;  /* 将函数原型与表移除 */
 }
 
-
+/* 开始分析吧，少年 */
 Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
   struct LexState lexstate;
   struct FuncState funcstate;
   lexstate.buff = buff;
   luaX_setinput(L, &lexstate, z, luaS_new(L, name));
+  /* 打开函数 */
   open_func(&lexstate, &funcstate);
-  funcstate.f->is_vararg = VARARG_ISVARARG;  /* main func. is always vararg */
-  luaX_next(&lexstate);  /* read first token */
+  funcstate.f->is_vararg = VARARG_ISVARARG;   /* 主函数，总是多参数函数 */
+  luaX_next(&lexstate);                       /* 读取第一个标记 */
+  /* 进入语法分析 */
   chunk(&lexstate);
+  /* 检查当前标记是否是末尾标记 */
   check(&lexstate, TK_EOS);
+  /* 关闭这个函数 */
   close_func(&lexstate);
   lua_assert(funcstate.prev == NULL);
   lua_assert(funcstate.f->nups == 0);
   lua_assert(lexstate.fs == NULL);
+  
+  /* 返回函数原型 */
   return funcstate.f;
 }
 
@@ -403,13 +439,14 @@ Proto *luaY_parser (lua_State *L, ZIO *z, Mbuffer *buff, const char *name) {
 /* GRAMMAR RULES */
 /*============================================================*/
 
-
+/* `.字段`语法处理 */
 static void field (LexState *ls, expdesc *v) {
   /* field -> ['.' | ':'] NAME */
   FuncState *fs = ls->fs;
   expdesc key;
   luaK_exp2anyreg(fs, v);
-  luaX_next(ls);  /* skip the dot or colon */
+  luaX_next(ls);  /* 跳过 `.` 或者 `:` */
+  /* 检查名称 */
   checkname(ls, &key);
   luaK_indexed(fs, v, &key);
 }
@@ -663,7 +700,9 @@ static void funcargs (LexState *ls, expdesc *f) {
 ** =======================================================================
 */
 
-
+/* 处理表达式前缀
+ * prefixexp -> NAME | '(' expr ')'
+ */
 static void prefixexp (LexState *ls, expdesc *v) {
   /* prefixexp -> NAME | '(' expr ')' */
   switch (ls->t.token) {
@@ -686,11 +725,16 @@ static void prefixexp (LexState *ls, expdesc *v) {
   }
 }
 
-
+/* 主表达式分析
+ * primaryexp -> prefixexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs }
+ * v 表达式指针
+ */
 static void primaryexp (LexState *ls, expdesc *v) {
   /* primaryexp ->
         prefixexp { `.' NAME | `[' exp `]' | `:' NAME funcargs | funcargs } */
   FuncState *fs = ls->fs;
+  
+  /* 表达式前缀分析 */
   prefixexp(ls, v);
   for (;;) {
     switch (ls->t.token) {
@@ -713,7 +757,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
         funcargs(ls, v);
         break;
       }
-      case '(': case TK_STRING: case '{': {  /* funcargs */
+      case '(': case TK_STRING: case '{': {  /* 函数参数 */
         luaK_exp2nextreg(fs, v);
         funcargs(ls, v);
         break;
@@ -723,7 +767,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
   }
 }
 
-
+/* 单纯的表达式 */
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> NUMBER | STRING | NIL | true | false | ... |
                   constructor | FUNCTION body | primaryexp */
@@ -807,8 +851,8 @@ static BinOpr getbinopr (int op) {
 }
 
 static const struct {
-  lu_byte left;  /* left priority for each binary operator */
-  lu_byte right; /* right priority */
+  lu_byte left;  /* 每个二元运算符的左结合优先级 */
+  lu_byte right; /* 右结合优先级 */
 } priority[] = {  /* ORDER OPR */
    {6, 6}, {6, 6}, {7, 7}, {7, 7}, {7, 7},  /* `+' `-' `/' `%' */
    {10, 9}, {5, 4},                 /* power and concat (right associative) */
@@ -817,7 +861,7 @@ static const struct {
    {2, 2}, {1, 1}                   /* logical (and/or) */
 };
 
-#define UNARY_PRIORITY	8  /* priority for unary operators */
+#define UNARY_PRIORITY	8  /* 一元运算符的优先级 */
 
 
 /* 分析子表达式
@@ -829,11 +873,18 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
   UnOpr uop;
   enterlevel(ls);
   uop = getunopr(ls->t.token);
+  /* 获取单元运算符 
+   * 当前运算符不是单元运算符读取下一个
+   * 这里也表明单元运算符号的优先级永远比
+   * 双元的高
+   */
   if (uop != OPR_NOUNOPR) {
     luaX_next(ls);
+    /* 子表达式，单目运算优先 */
     subexpr(ls, v, UNARY_PRIORITY);
     luaK_prefix(ls->fs, uop, v);
   }
+  /* 如果是二元运算符 */
   else simpleexp(ls, v);
   /* expand while operators have priorities higher than `limit' */
   op = getbinopr(ls->t.token);              /* 取得二元操作符号 */
@@ -852,9 +903,12 @@ static BinOpr subexpr (LexState *ls, expdesc *v, unsigned int limit) {
     op = nextop;
   }
   leavelevel(ls);
-  return op;  /* return first untreated operator */
+  
+  /* 遇到比当前的二元运算符号优先级高的运算符号 */
+  return op;  /* 返回第一个未经过处理的运算符号 */
 }
 
+/* 处理一条表达式 */
 static void expr (LexState *ls, expdesc *v) {
   subexpr(ls, v, 0);
 }
@@ -869,7 +923,10 @@ static void expr (LexState *ls, expdesc *v) {
 ** =======================================================================
 */
 
-
+/* 跟随代码块的标记
+ * else elseif end
+ * until 结尾符号
+ */
 static int block_follow (int token) {
   switch (token) {
     case TK_ELSE: case TK_ELSEIF: case TK_END:
@@ -879,7 +936,7 @@ static int block_follow (int token) {
   }
 }
 
-
+/* 新的一个代码块 */
 static void block (LexState *ls) {
   /* block -> chunk */
   FuncState *fs = ls->fs;
@@ -895,6 +952,7 @@ static void block (LexState *ls) {
 ** structure to chain all variables in the left-hand side of an
 ** assignment
 */
+/* 一条assignment的左值 */
 struct LHS_assign {
   struct LHS_assign *prev;
   expdesc v;  /* variable (global, local, upvalue, or indexed) */
@@ -973,17 +1031,23 @@ static int cond (LexState *ls) {
   return v.f;
 }
 
-
+/* break语句
+ * ls 词法分析指针
+ */
 static void breakstat (LexState *ls) {
   FuncState *fs = ls->fs;
   BlockCnt *bl = fs->bl;
   int upval = 0;
+  /* 回溯代码块指针
+   * 直到代码块不存在或者不能退出
+   */
   while (bl && !bl->isbreakable) {
     upval |= bl->upval;
     bl = bl->previous;
   }
   if (!bl)
     luaX_syntaxerror(ls, "no loop to break");
+  /* 存在upvalue则写入一条关闭upvalue的指令 */
   if (upval)
     luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
@@ -1222,13 +1286,20 @@ static void funcstat (LexState *ls, int line) {
   luaK_fixline(ls->fs, line);  /* definition `happens' in the first line */
 }
 
-
+/* 表达式
+ * func | assignment
+ */
 static void exprstat (LexState *ls) {
   /* stat -> func | assignment */
   FuncState *fs = ls->fs;
   struct LHS_assign v;
+  
+  /* 主表达式分析 */
   primaryexp(ls, &v.v);
-  if (v.v.k == VCALL)  /* stat -> func */
+  
+  /* 表达式是call指令 */
+  if (v.v.k == VCALL)     /* stat -> func */
+    /* v.v中保存了目标函数的pc值 */
     SETARG_C(getcode(fs, &v.v), 1);  /* call statement uses no results */
   else {  /* stat -> assignment */
     v.prev = NULL;
@@ -1269,71 +1340,88 @@ static void retstat (LexState *ls) {
   luaK_ret(fs, first, nret);
 }
 
-
+/* 好吧进入语言主体分析
+ * ls 词法分析状态指针
+ */
 static int statement (LexState *ls) {
-  int line = ls->linenumber;  /* may be needed for error messages */
+  int line = ls->linenumber;  /* 一些出错信息需要 */
+  /*
+   * 判断启动标记
+   */
   switch (ls->t.token) {
-    case TK_IF: {  /* stat -> ifstat */
+    case TK_IF: {             /* stat -> ifstat */
       ifstat(ls, line);
       return 0;
     }
-    case TK_WHILE: {  /* stat -> whilestat */
+    case TK_WHILE: {          /* stat -> whilestat */
       whilestat(ls, line);
       return 0;
     }
-    case TK_DO: {  /* stat -> DO block END */
-      luaX_next(ls);  /* skip DO */
+    case TK_DO: {             /* stat -> DO block END */
+      luaX_next(ls);          /* 跳过 DO */
       block(ls);
+      /* 匹配当前标记是否是end */
       check_match(ls, TK_END, TK_DO, line);
       return 0;
     }
-    case TK_FOR: {  /* stat -> forstat */
+    case TK_FOR: {            /* stat -> forstat */
       forstat(ls, line);
       return 0;
     }
-    case TK_REPEAT: {  /* stat -> repeatstat */
+    case TK_REPEAT: {         /* stat -> repeatstat */
       repeatstat(ls, line);
       return 0;
     }
     case TK_FUNCTION: {
-      funcstat(ls, line);  /* stat -> funcstat */
+      funcstat(ls, line);     /* stat -> funcstat */
       return 0;
     }
-    case TK_LOCAL: {  /* stat -> localstat */
-      luaX_next(ls);  /* skip LOCAL */
+    case TK_LOCAL: {          /* stat -> localstat */
+      luaX_next(ls);          /* 跳过 LOCAL */
       if (testnext(ls, TK_FUNCTION))  /* local function? */
         localfunc(ls);
       else
         localstat(ls);
       return 0;
     }
-    case TK_RETURN: {  /* stat -> retstat */
+    case TK_RETURN: {         /* stat -> retstat */
       retstat(ls);
-      return 1;  /* must be last statement */
+      return 1;               /* 必须是最后一个statement */
     }
-    case TK_BREAK: {  /* stat -> breakstat */
-      luaX_next(ls);  /* skip BREAK */
+    case TK_BREAK: {          /* stat -> breakstat */
+      luaX_next(ls);          /* 跳过BREAK */
       breakstat(ls);
-      return 1;  /* must be last statement */
+      return 1;               /* 必须是最后一个statement */
     }
     default: {
-      exprstat(ls);
-      return 0;  /* to avoid warnings */
+      exprstat(ls);           /* 表达式 */
+      return 0;               /* to avoid warnings */
     }
   }
 }
 
-
+/* 代码块分析
+ * { stat [`;'] }
+ */
 static void chunk (LexState *ls) {
   /* chunk -> { stat [`;'] } */
   int islast = 0;
   enterlevel(ls);
+  /* 没有到末尾以及代码块的跟随
+   * 代码块第一个标记不能是跟随标记
+   */
   while (!islast && !block_follow(ls->t.token)) {
+    /* 进入主体分析
+     * 当islast为1是表示退出代码块分析
+     * return与break语句
+     */
     islast = statement(ls);
+    
+    /* 测试最后一个是否是;字符，如果是则读取下一个标记 */
     testnext(ls, ';');
     lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
                ls->fs->freereg >= ls->fs->nactvar);
-    ls->fs->freereg = ls->fs->nactvar;  /* free registers */
+    ls->fs->freereg = ls->fs->nactvar;  /* 空闲寄存器的索引 */
   }
   leavelevel(ls);
 }

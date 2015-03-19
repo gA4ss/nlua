@@ -11,31 +11,30 @@
 #include "lobject.h"
 #include "lzio.h"
 
-
 /*
-** Expression descriptor
-*/
-
+ * 表达式描述
+ */
 typedef enum {
-  VVOID,	/* no value */
-  VNIL,
-  VTRUE,
-  VFALSE,
-  VK,		/* info = index of constant in `k' */
-  VKNUM,	/* nval = numerical value */
-  VLOCAL,	/* info = local register */
-  VUPVAL,       /* info = index of upvalue in `upvalues' */
-  VGLOBAL,	/* info = index of table; aux = index of global name in `k' */
-  VINDEXED,	/* info = table register; aux = index register (or `k') */
-  VJMP,		/* info = instruction pc */
-  VRELOCABLE,	/* info = instruction pc */
-  VNONRELOC,	/* info = result register */
-  VCALL,	/* info = instruction pc */
-  VVARARG	/* info = instruction pc */
+  VVOID,          /* 无值 */
+  VNIL,           /* 空值 */
+  VTRUE,          /* 真值 */
+  VFALSE,         /* 假值 */
+  VK,             /* info = `k'常量表索引 */
+  VKNUM,          /* nval = 实数值 */
+  VLOCAL,         /* info = 局部变量寄存器索引 */
+  VUPVAL,         /* info = `upvalues'中的索引 */
+  VGLOBAL,        /* info = 表的索引; aux = 在`k'表中全局名称的索引 */
+  VINDEXED,       /* info = 表寄存器索引; aux = 寄存器索引或者在`k'中的索引 */
+  VJMP,           /* info = 当前值了的pc值 */
+  VRELOCABLE,     /* info = 指令的pc值 */
+  VNONRELOC,      /* info = 结果寄存器索引 */
+  VCALL,          /* info = 指令的pc值 */
+  VVARARG         /* info = 指令的pc值 */
 } expkind;
 
+/* 表达式结构 */
 typedef struct expdesc {
-  expkind k;
+  expkind k;      /* 表达式类型 */
   union {
     struct { int info, aux; } s;
     lua_Number nval;
@@ -44,34 +43,32 @@ typedef struct expdesc {
   int f;  /* patch list of `exit when false' */
 } expdesc;
 
-
+/* upvalue描述 */
 typedef struct upvaldesc {
   lu_byte k;
   lu_byte info;
 } upvaldesc;
 
+struct BlockCnt;  /* 在lparser.c文件中定义 */
 
-struct BlockCnt;  /* defined in lparser.c */
-
-
-/* state needed to generate code for a given function */
+/* 产生代码时需要这个函数状态 */
 typedef struct FuncState {
-  Proto *f;  /* current function header */
-  Table *h;  /* table to find (and reuse) elements in `k' */
-  struct FuncState *prev;  /* enclosing function */
-  struct LexState *ls;  /* lexical state */
-  struct lua_State *L;  /* copy of the Lua state */
-  struct BlockCnt *bl;  /* chain of current blocks */
-  int pc;  /* next position to code (equivalent to `ncode') */
-  int lasttarget;   /* `pc' of last `jump target' */
-  int jpc;  /* list of pending jumps to `pc' */
-  int freereg;  /* first free register */
-  int nk;  /* number of elements in `k' */
-  int np;  /* number of elements in `p' */
-  short nlocvars;  /* number of elements in `locvars' */
-  lu_byte nactvar;  /* number of active local variables */
-  upvaldesc upvalues[LUAI_MAXUPVALUES];  /* upvalues */
-  unsigned short actvar[LUAI_MAXVARS];  /* declared-variable stack */
+  Proto *f;                     /* 当前函数头 */
+  Table *h;                     /* `k`的常量哈希表 */
+  struct FuncState *prev;       /* 上一个函数状态 */
+  struct LexState *ls;          /* 词法分析状态 */
+  struct lua_State *L;          /* lua线程状态 */
+  struct BlockCnt *bl;          /* 代码块链表 */
+  int pc;                       /* 下一条指令的位置(等于`ncode`) */
+  int lasttarget;               /* 最后一个jmp指令的目标地址 */
+  int jpc;                      /* list of pending jumps to `pc' */
+  int freereg;                  /* 第一个空闲可用的寄存器 */
+  int nk;                       /* 常量k的个数 */
+  int np;                       /* 函数p的个数 */
+  short nlocvars;               /* 局部变量的个数 */
+  lu_byte nactvar;              /* 当前活动局部变量的个数 */
+  upvaldesc upvalues[LUAI_MAXUPVALUES];   /* upvalues */
+  unsigned short actvar[LUAI_MAXVARS];    /* 纪录了对应的真实变量在栈中的索引 */
 } FuncState;
 
 

@@ -13,14 +13,11 @@
 
 #define FIRST_RESERVED	257
 
-/* maximum length of a reserved word */
+/* 保留字最大的字符串长度 */
 #define TOKEN_LEN	(sizeof("function")/sizeof(char))
 
 
-/*
-* WARNING: if you change the order of this enumeration,
-* grep "ORDER RESERVED"
-*/
+/* 标记 */
 enum RESERVED {
   /* terminal symbols denoted by reserved words */
   TK_AND = FIRST_RESERVED, TK_BREAK,
@@ -39,31 +36,31 @@ enum RESERVED {
 /* array with token `names' */
 LUAI_DATA const char *const luaX_tokens [];
 
-
+/* 标记字面值 */
 typedef union {
   lua_Number r;
   TString *ts;
 } SemInfo;  /* semantics information */
 
-
+/* 标记结构 */
 typedef struct Token {
   int token;
   SemInfo seminfo;
 } Token;
 
-
+/* 词法状态 */
 typedef struct LexState {
-  int current;  /* current character (charint) */
-  int linenumber;  /* input line counter */
-  int lastline;  /* line of last token `consumed' */
-  Token t;  /* current token */
-  Token lookahead;  /* look ahead token */
-  struct FuncState *fs;  /* `FuncState' is private to the parser */
-  struct lua_State *L;
-  ZIO *z;  /* input stream */
-  Mbuffer *buff;  /* buffer for tokens */
-  TString *source;  /* current source name */
-  char decpoint;  /* locale decimal point */
+  int current;              /* 当前字符 */
+  int linenumber;           /* 行号 */
+  int lastline;             /* 最后标记的行号 */
+  Token t;                  /* 当前词法标记 */
+  Token lookahead;          /* 向前查看一个标记 */
+  struct FuncState *fs;     /* `FuncState' 结构指针，词语法分析专有 */
+  struct lua_State *L;      /* lua线程状态指针 */
+  ZIO *z;                   /* 输入流 */
+  Mbuffer *buff;            /* 词法分析的临时缓存 */
+  TString *source;          /* 当前源程序名 */
+  char decpoint;            /* 本地 点 字符 */
 } LexState;
 
 

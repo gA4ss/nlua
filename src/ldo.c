@@ -362,22 +362,24 @@ int luaD_poscall (lua_State *L, StkId firstResult) {
   return (wanted - LUA_MULTRET);  /* 0 iff wanted == LUA_MULTRET */
 }
 
-
-/*
-** Call a function (C or Lua). The function to be called is at *func.
-** The arguments are on the stack, right after the function.
-** When returns, all the results are on the stack, starting at the original
-** function position.
-*/ 
+/* 调用一个函数 (C 或者 Lua)。这个函数被调用在 *func。
+ * 参数在栈上，在函数的的右侧。
+ * 当函数返回，所有的结果都在栈上，第一个结果在原本函数地址的位置。
+ *
+ * L 线程状态指针
+ * func 执行的函数指针
+ * nResults 结果
+ */
 void luaD_call (lua_State *L, StkId func, int nResults) {
+  /* 调用层数过大 */
   if (++L->nCcalls >= LUAI_MAXCCALLS) {
     if (L->nCcalls == LUAI_MAXCCALLS)
       luaG_runerror(L, "C stack overflow");
     else if (L->nCcalls >= (LUAI_MAXCCALLS + (LUAI_MAXCCALLS>>3)))
-      luaD_throw(L, LUA_ERRERR);  /* error while handing stack error */
+      luaD_throw(L, LUA_ERRERR);  /* 当错误发生则抛出 */
   }
-  if (luaD_precall(L, func, nResults) == PCRLUA)  /* is a Lua function? */
-    luaV_execute(L, 1);  /* call it */
+  if (luaD_precall(L, func, nResults) == PCRLUA)  /* 这是一个Lua函数 */
+    luaV_execute(L, 1);  /* 调用它 */
   L->nCcalls--;
   luaC_checkGC(L);
 }

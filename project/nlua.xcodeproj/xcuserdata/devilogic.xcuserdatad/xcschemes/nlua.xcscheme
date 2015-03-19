@@ -88,6 +88,10 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/devilogic/workspace/test.dump"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "/Users/devilogic/Naga/nlua/test/testpb.lua"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

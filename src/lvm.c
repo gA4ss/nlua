@@ -1069,24 +1069,6 @@ reentry:  /* 重新进入点 */
   base = L->base;                 /* 获取当前的栈基 */
   //k = cl->p->k;                 /* 获取当前的常量队列 */
   
-#if 0
-  /* 是否加密指令 */
-  if (nlo_ei(nopt)) {
-    unsigned int key = crc32(&(f->code[0]), (f->sizecode)*sizeof(Instruction));
-    /* 加密第一条代码 */
-    nluaE_setkey(L, key);
-    g->ienins(D->L,&(f->code[0]));
-    
-    /* 加密其余指令 */
-    for (i=1; i<f->sizecode; i++) {
-      /* 使用其他指令的密文hash作为key */
-      key = crc32(&(f->code[i-1]), sizeof(Instruction));
-      nluaE_setkey(L, key);
-      g->ienins(D->L,&(f->code[i]));
-    }
-  }
-#endif
-  
   /* 解释主循环 */
   for (;;) {
     Instruction i;

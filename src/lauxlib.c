@@ -555,7 +555,7 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   LoadF lf;
   int status, readstatus;
   int c;
-  int fnameindex = lua_gettop(L) + 1;  /* index of filename on the stack */
+  int fnameindex = lua_gettop(L) + 1;  /* 在栈上的文件名索引 */
   lf.extraline = 0;
   if (filename == NULL) {
     lua_pushliteral(L, "=stdin");
@@ -592,12 +592,15 @@ LUALIB_API int luaL_loadfile (lua_State *L, const char *filename) {
   
   /* 加载程序文件内容 */
   status = lua_load(L, getF, &lf, lua_tostring(L, -1));
+  /* 获取读取状态 */
   readstatus = ferror(lf.f);
-  if (filename) fclose(lf.f);  /* close file (even in case of errors) */
+  if (filename) fclose(lf.f);  /* 无论读取是否正确都关闭文件句柄 */
+  /* 读取失败 */
   if (readstatus) {
     lua_settop(L, fnameindex);  /* ignore results from `lua_load' */
     return errfile(L, "read", fnameindex);
   }
+  /* 移除文件名在栈上的索引 */
   lua_remove(L, fnameindex);
   return status;
 }
