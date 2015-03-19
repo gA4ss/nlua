@@ -458,6 +458,7 @@ static int op_loadk(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
 static int op_loadbool(lua_State* L, Instruction ins, StkId* base, LClosure* cl,
                        const Instruction** pc, int* pnexeccalls) {
   op_common();
+  setbvalue(ra, GETARG_B(ins));
   /* 如果C为真，则跳过下一条指令 */
   if (GETARG_C(ins)) {
     (*pc)++;
