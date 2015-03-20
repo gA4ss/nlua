@@ -56,8 +56,7 @@ typedef struct naga_lua_options {
 #define nlo_get_key(o)    ((unsigned char*)(o) + sizeof(NagaLuaOpt))
 
 /* load one chunk; from nundump.c */
-LUAI_FUNC Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name,
-                               unsigned int *opts, OpCode *tab);
+LUAI_FUNC Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name);
 
 /* make header; from nundump.c */
 LUAI_FUNC void nluaU_header (char* h);

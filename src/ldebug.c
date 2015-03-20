@@ -280,17 +280,17 @@ static int precheck (const Proto *pt) {
               (pt->is_vararg & VARARG_HASARG));
   check(pt->sizeupvalues <= pt->nups);
   check(pt->sizelineinfo == pt->sizecode || pt->sizelineinfo == 0);
-  check(pt->sizecode > 0 && GET_OPCODE(pt->code[pt->sizecode-1]) == OP_RETURN);
+  check(pt->sizecode > 0 && GET_OPCODE(pt->code[pt->sizecode-1]) == P_OP(pt,I_RETURN));
   return 1;
 }
 
 
-#define checkopenop(pt,pc)	luaG_checkopenop((pt)->code[(pc)+1])
+#define checkopenop(pt,pc)	luaG_checkopenop((pt), (pt)->code[(pc)+1])
 
-int luaG_checkopenop (Instruction i) {
+int luaG_checkopenop (Proto *p, Instruction i) {
   OpCode o = GET_OPCODE(i);
-  if ((o==OP_CALL) || (o==OP_TAILCALL) ||
-      (o==OP_RETURN) || (o==OP_SETLIST)) {
+  if ((o==P_OP(p,I_CALL)) || (o==P_OP(p,I_TAILCALL)) ||
+      (o==P_OP(p,I_RETURN)) || (o==P_OP(p,I_SETLIST))) {
     check(GETARG_B(i) == 0);
     return 1;
   }
@@ -329,22 +329,22 @@ static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg)
     int c = 0;
     check(op < NUM_OPCODES);
     checkreg(pt, a);
-    switch (nluaP_getopmode(L, op)) {
+    switch (nluaP_getopmode(L, pt, op)) {
       case iABC: {
         b = GETARG_B(i);
         c = GETARG_C(i);
-        check(checkArgMode(pt, b, nluaP_getbmode(L, op)));
-        check(checkArgMode(pt, c, nluaP_getcmode(L, op)));
+        check(checkArgMode(pt, b, nluaP_getbmode(L, pt, op)));
+        check(checkArgMode(pt, c, nluaP_getcmode(L, pt, op)));
         break;
       }
       case iABx: {
         b = GETARG_Bx(i);
-        if (nluaP_getbmode(L,op) == OpArgK) check(b < pt->sizek);
+        if (nluaP_getbmode(L,pt,op) == OpArgK) check(b < pt->sizek);
         break;
       }
       case iAsBx: {
         b = GETARG_sBx(i);
-        if (nluaP_getbmode(L,op) == OpArgR) {
+        if (nluaP_getbmode(L,pt,op) == OpArgR) {
           int dest = pc+1+b;
           check(0 <= dest && dest < pt->sizecode);
           if (dest > 0) {
@@ -355,7 +355,7 @@ static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg)
                go all the way back to the first of them (if any) */
             for (j = 0; j < dest; j++) {
               Instruction d = pt->code[dest-1-j];
-              if (!(GET_OPCODE(d) == OP_SETLIST && GETARG_C(d) == 0)) break;
+              if (!(GET_OPCODE(d) == P_OP(pt,I_SETLIST) && GETARG_C(d) == 0)) break;
             }
             /* if 'j' is even, previous value is not a setlist (even if
                it looks like one) */
@@ -366,51 +366,51 @@ static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg)
       }
     }/* end switch */
     
-    if (nluaP_testamode(L,op)) {
+    if (nluaP_testamode(L,pt,op)) {
       if (a == reg) last = pc;     /* change register `a' */
     }
-    if (nluaP_testtmode(L,op)) {
+    if (nluaP_testtmode(L,pt,op)) {
       check(pc+2 < pt->sizecode);  /* check skip */
-      check(GET_OPCODE(pt->code[pc+1]) == OP_JMP);
+      check(GET_OPCODE(pt->code[pc+1]) == P_OP(pt,I_JMP));
     }
     
-    if (op==OP_LOADBOOL) {
+    if (op==P_OP(pt,I_LOADBOOL)) {
       if (c == 1) {  /* does it jump? */
         check(pc+2 < pt->sizecode);  /* check its jump */
-        check(GET_OPCODE(pt->code[pc+1]) != OP_SETLIST ||
+        check(GET_OPCODE(pt->code[pc+1]) != P_OP(pt,I_SETLIST) ||
               GETARG_C(pt->code[pc+1]) != 0);
       }
-    } else if (op==OP_LOADNIL) {
+    } else if (op==P_OP(pt,I_LOADNIL)) {
       if (a <= reg && reg <= b)
         last = pc;  /* set registers from `a' to `b' */
-    } else if ((op==OP_GETUPVAL) || (op==OP_SETUPVAL)) {
+    } else if ((op==P_OP(pt,I_GETUPVAL)) || (op==P_OP(pt,I_SETUPVAL))) {
       check(b < pt->nups);
-    } else if ((op==OP_GETGLOBAL) || (op==OP_SETGLOBAL)) {
+    } else if ((op==P_OP(pt,I_GETGLOBAL)) || (op==P_OP(pt,I_SETGLOBAL))) {
       check(ttisstring(&pt->k[b]));
-    } else if (op==OP_SELF) {
+    } else if (op==P_OP(pt,I_SELF)) {
       checkreg(pt, a+1);
       if (reg == a+1) last = pc;
-    } else if (op==OP_CONCAT) {
+    } else if (op==P_OP(pt,I_CONCAT)) {
       check(b < c);  /* at least two operands */
-    } else if (op==OP_TFORLOOP) {
+    } else if (op==P_OP(pt,I_TFORLOOP)) {
       check(c >= 1);  /* at least one result (control variable) */
       checkreg(pt, a+2+c);  /* space for results */
       if (reg >= a+2) last = pc;  /* affect all regs above its base */
-    } else if ((op==OP_FORLOOP) || (op==OP_FORPREP) || (op==OP_JMP)) {
+    } else if ((op==P_OP(pt,I_FORLOOP)) || (op==P_OP(pt,I_FORPREP)) || (op==P_OP(pt,I_JMP))) {
       int dest;
       
-      if ((op==OP_FORLOOP) || (op==OP_FORPREP)) {
+      if ((op==P_OP(pt,I_FORLOOP)) || (op==P_OP(pt,I_FORPREP))) {
         checkreg(pt, a+3);
       }
       
       /* 
-       * OP_JMP直接到这里
+       * I_JMP直接到这里
        */
       dest = pc+1+b;
       /* not full check and jump is forward and do not skip `lastpc'? */
       if (reg != NO_REG && pc < dest && dest <= lastpc)
         pc += b;  /* do the jump */
-    } else if ((op==OP_CALL) || (op==OP_TAILCALL)) {
+    } else if ((op==P_OP(pt,I_CALL)) || (op==P_OP(pt,I_TAILCALL))) {
       if (b != 0) {
         checkreg(pt, a+b-1);
       }
@@ -421,27 +421,27 @@ static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg)
       else if (c != 0)
         checkreg(pt, a+c-1);
       if (reg >= a) last = pc;  /* affect all registers above base */
-    } else if (op==OP_RETURN) {
+    } else if (op==P_OP(pt,I_RETURN)) {
       b--;  /* b = num. returns */
       if (b > 0) checkreg(pt, a+b-1);
-    } else if (op==OP_SETLIST) {
+    } else if (op==P_OP(pt,I_SETLIST)) {
       if (b > 0) checkreg(pt, a + b);
       if (c == 0) {
         pc++;
         check(pc < pt->sizecode - 1);
       }
-    } else if (op==OP_CLOSURE) {
+    } else if (op==P_OP(pt,I_CLOSURE)) {
       int nup, j;
       check(b < pt->sizep);
       nup = pt->p[b]->nups;
       check(pc + nup < pt->sizecode);
       for (j = 1; j <= nup; j++) {
         OpCode op1 = GET_OPCODE(pt->code[pc + j]);
-        check(op1 == OP_GETUPVAL || op1 == OP_MOVE);
+        check(op1 == P_OP(pt,I_GETUPVAL) || op1 == P_OP(pt,I_MOVE));
       }
       if (reg != NO_REG)  /* tracing? */
         pc += nup;  /* do not 'execute' these pseudo-instructions */
-    } else if (op==OP_VARARG) {
+    } else if (op==P_OP(pt,I_VARARG)) {
       check((pt->is_vararg & VARARG_ISVARARG) &&
             !(pt->is_vararg & VARARG_NEEDSARG));
       b--;
@@ -486,25 +486,25 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
     lua_assert(pc != -1);
     o=GET_OPCODE(i);
     
-    if (o==OP_GETGLOBAL) {
+    if (o==P_OP(p,I_GETGLOBAL)) {
       int g = GETARG_Bx(i);  /* global index */
       lua_assert(ttisstring(&p->k[g]));
       *name = svalue(&p->k[g]);
       return "global";
-    } else if (o==OP_MOVE) {
+    } else if (o==P_OP(p,I_MOVE)) {
       int a = GETARG_A(i);
       int b = GETARG_B(i);  /* move from `b' to `a' */
       if (b < a)
         return getobjname(L, ci, b, name);  /* get name for `b' */
-    } else if (o==OP_GETTABLE) {
+    } else if (o==P_OP(p,I_GETTABLE)) {
       int k = GETARG_C(i);  /* key index */
       *name = kname(p, k);
       return "field";
-    } else if (o==OP_GETUPVAL) {
+    } else if (o==P_OP(p,I_GETUPVAL)) {
       int u = GETARG_B(i);  /* upvalue index */
       *name = p->upvalues ? getstr(p->upvalues[u]) : "?";
       return "upvalue";
-    } else if (o==OP_SELF) {
+    } else if (o==P_OP(p,I_SELF)) {
       int k = GETARG_C(i);  /* key index */
       *name = kname(p, k);
       return "method";
@@ -515,13 +515,15 @@ static const char *getobjname (lua_State *L, CallInfo *ci, int stackpos,
 
 
 static const char *getfuncname (lua_State *L, CallInfo *ci, const char **name) {
+  Proto *p;
   Instruction i;
   if ((isLua(ci) && ci->tailcalls > 0) || !isLua(ci - 1))
     return NULL;  /* calling function is not Lua (or is unknown) */
   ci--;  /* calling function */
   i = ci_func(ci)->l.p->code[currentpc(L, ci)];
-  if (GET_OPCODE(i) == OP_CALL || GET_OPCODE(i) == OP_TAILCALL ||
-      GET_OPCODE(i) == OP_TFORLOOP)
+  p = ci_func(ci)->l.p;
+  if (GET_OPCODE(i) == P_OP(p,I_CALL) || GET_OPCODE(i) == P_OP(p,I_TAILCALL) ||
+      GET_OPCODE(i) == P_OP(p,I_TFORLOOP))
     return getobjname(L, ci, GETARG_A(i), name);
   else
     return NULL;  /* no useful name can be found */

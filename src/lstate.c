@@ -181,7 +181,7 @@ static void init_nlua(global_State *g) {
   g->fkmake = nluaV_fkmake;
   
   /* 进行opcode规则的重新编码 */
-  nluaV_oprinit(g);
+  nluaV_oprinit(NULL, &(g->oprule));
 }
 
 /* 分配新的状态 */
@@ -272,24 +272,38 @@ LUA_API void lua_close (lua_State *L) {
 /*
  * nlua
  */
-LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt) {
+LUAI_FUNC void nluaE_setopt (lua_State *L, int opt) {
   G(L)->nopt = opt;
+}
+
+LUAI_FUNC int nluaE_getopt (lua_State *L) {
+  return G(L)->nopt;
 }
 
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key) {
   G(L)->ekey=key;
 }
 
-LUAI_FUNC void nluaE_setsign (lua_State *L, int compiler, int opted) {
-  if (compiler) {
-    ns_set_compiler(G(L)->sign);
-  }
-  
-  if (opted) {
-    ns_set_opted(G(L)->sign);
-  }
+LUAI_FUNC unsigned int nluaE_getkey (lua_State *L) {
+  return G(L)->ekey;
 }
 
-LUAI_FUNC int nluaE_getsign (lua_State *L) {
-  return G(L)->sign;
+LUAI_FUNC void nluaE_setcs (lua_State *L) {
+  ns_set_compiler(G(L)->sign);
+}
+
+LUAI_FUNC int nluaE_getcs (lua_State *L) {
+  return ns_get_compiler(G(L)->sign);
+}
+
+LUAI_FUNC OPR *nluaE_getopr (lua_State *L) {
+  OPR *r;
+  if (isLua(L->ci)) {
+    Proto *p = curr_func(L)->l.p;
+    r = &(p->rule.oprule);
+  } else {
+    r = &(G(L)->oprule);
+  }
+  
+  return r;
 }

@@ -9,6 +9,7 @@
 #include "nlua.h"
 #include "lstate.h"
 #include "nopcodes.h"
+#include "lobject.h"
 
 void nluaP_opinit() {
   OP_MOVE=0;
@@ -103,13 +104,13 @@ void nluaP_oprecode(OpCode *tab) {
 | (cast(Instruction, bc)<<POS_Bx))
 
 Instruction nluaP_createABC(lua_State *L, OpCode o, int a, int b, int c) {
-    Instruction i = CREATE_ABC(o,a,b,c);
-    return i;
+  Instruction i = CREATE_ABC(o,a,b,c);
+  return i;
 }
 
 Instruction nluaP_createABx(lua_State *L, OpCode o, int a, unsigned int bc) {
-    Instruction i = CREATE_ABx(o,a,bc);
-    return i;
+  Instruction i = CREATE_ABx(o,a,bc);
+  return i;
 }
 
 /*
@@ -119,56 +120,67 @@ Instruction xluaP_createAx(lua_State *L, OpCode o, int ax) {
 }
 */
 
+static OpRun get_oprun(lua_State *L, Proto *p, OpCode m) {
+  OPR *opr;
+  OpRun r;
+  
+  if (p) {
+    opr = &(p->rule.oprule);
+  } else {
+    lua_assert(L);
+    opr = &(G(L)->oprule);
+  }
+  
+  r = opr->opmods[m];
+  
+  return r;
+}
+
 /* 取得指令的操作模式
  * m OpCode
  */
-lu_byte nluaP_getopmode(lua_State *L, OpCode m) {
-    global_State *g = G(L);
-    OpRun r = g->oprule.opmods[m];
-    OpMode md = r & 3;
+lu_byte nluaP_getopmode(lua_State *L, Proto *p, OpCode m) {
+  OpRun r = get_oprun(L,p,m);
+  OpMode md = r & 3;
     
-    return md;
+  return md;
 }
 
 /* 取得指令的B参数状态
  * m OpCode
  */
-lu_byte nluaP_getbmode(lua_State *L, OpCode m) {
-    global_State *g = G(L);
-    OpRun r = g->oprule.opmods[m];
-    OpArgMask oam = (r >> 4) & 3;
+lu_byte nluaP_getbmode(lua_State *L, Proto *p, OpCode m) {
+  OpRun r = get_oprun(L,p,m);
+  OpArgMask oam = (r >> 4) & 3;
     
-    return oam;
+  return oam;
 }
 
 /* 取得指令的C参数状态
  * m OpCode
  */
-lu_byte nluaP_getcmode(lua_State *L, OpCode m) {
-    global_State *g = G(L);
-    OpRun r = g->oprule.opmods[m];
-    OpArgMask oam = (r >> 2) & 3;
+lu_byte nluaP_getcmode(lua_State *L, Proto *p, OpCode m) {
+  OpRun r = get_oprun(L,p,m);
+  OpArgMask oam = (r >> 2) & 3;
     
-    return oam;
+  return oam;
 }
 
 /* 测试A是寄存器还是upvalue
  * m OpCode
  */
-lu_byte nluaP_testamode(lua_State *L, OpCode m) {
-    global_State *g = G(L);
-    OpRun r = g->oprule.opmods[m];
+lu_byte nluaP_testamode(lua_State *L, Proto *p, OpCode m) {
+  OpRun r = get_oprun(L,p,m);
     
-    return (r & (1 << 6));
+  return (r & (1 << 6));
 }
 
 /* 测试当前指令是否是条件跳转指令
  * m OpCode
  */
-lu_byte nluaP_testtmode(lua_State *L, OpCode m) {
-    global_State *g = G(L);
-    OpRun r = g->oprule.opmods[m];   /* 取出操作模式 */
+lu_byte nluaP_testtmode(lua_State *L, Proto *p, OpCode m) {
+  OpRun r = get_oprun(L,p,m);
     
-    /* 最高位表示是否是条件跳转指令 */
-    return (r & (1 << 7));
+  /* 最高位表示是否是条件跳转指令 */
+  return (r & (1 << 7));
 }

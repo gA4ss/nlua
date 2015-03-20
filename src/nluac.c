@@ -217,17 +217,19 @@ static const Proto* combine(lua_State* L, int n) {
     f->sizep=n;
     pc=0;
     
+    /* 设置很重要的参数 */
+    memcpy(&(f->rule.oprule), &(G(L)->oprule), sizeof(OPR));
+    f->rule.ekey = G(L)->ekey;
+    f->rule.nopt = G(L)->nopt;
+    
     /* 遍历这些子函数,并且汇编调用代码 */
     for (i=0; i<n; i++) {
       f->p[i]=toproto(L,i-n-1);
-      //f->code[pc++]=CREATE_ABx(OP_CLOSURE,0,i);
-      //f->code[pc++]=CREATE_ABC(OP_CALL,0,1,1);
-      f->code[pc++]=nluaP_createABx(L,OP_CLOSURE,0,i);
-      f->code[pc++]=nluaP_createABC(L,OP_CALL,0,1,1);
+      f->code[pc++]=nluaP_createABx(L,P_OP(f,I_CLOSURE),0,i);
+      f->code[pc++]=nluaP_createABC(L,P_OP(f,I_CALL),0,1,1);
     }
     /* 汇编一条返回指令 */
-    //f->code[pc++]=CREATE_ABC(OP_RETURN,0,1,0);
-    f->code[pc++]=nluaP_createABC(L,OP_RETURN,0,1,0);
+    f->code[pc++]=nluaP_createABC(L,P_OP(f,I_RETURN),0,1,0);
     return f;
   }
 }
@@ -305,13 +307,16 @@ static int pmain(lua_State* L) {
     {
       unsigned int now_opt = ((NagaLuaOpt*)nopt)->opt;
       nluaE_setopt(L, now_opt);
-      nluaE_setsign(L, 1, 1);
+      nluaE_setcs(L);
     }
     
     /* 重新设定opcode编码表 */
     if (rop) {
-      nluaV_oprinit(G(L));
+      nluaV_oprrand_global(L);
     }
+    
+    /* 解密指令的key */
+    nluaE_setkey(L, NLUA_DEF_KEY);
   }
   
   /* 可以一次加载多个lua文件 */

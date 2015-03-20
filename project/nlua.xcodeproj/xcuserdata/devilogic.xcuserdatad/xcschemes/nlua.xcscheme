@@ -88,11 +88,11 @@
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/devilogic/workspace/test.luc"
-            isEnabled = "NO">
+            isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "/Users/devilogic/workspace/test.lua"
-            isEnabled = "YES">
+            isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
             argument = "-k /Users/devilogic/workspace/hello.lua -x /Users/devilogic/workspace/hello.lua -1 -2 -3 -4 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"

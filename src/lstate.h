@@ -52,7 +52,7 @@ typedef struct CallInfo {
 
 #define curr_func(L)	(clvalue(L->ci->func))                    /* 获取当前函数 */
 #define ci_func(ci)   (clvalue((ci)->func))
-#define f_isLua(ci)   (!ci_func(ci)->c.isC)                     /* 当前调用函数是不lua函数 */
+#define f_isLua(ci)   (!ci_func(ci)->c.isC)                     /* 当前调用函数是lua函数 */
 #define isLua(ci)     (ttisfunction((ci)->func) && f_isLua(ci)) /* 当前调用函数是lua函数 */
 
 /* 指令处理之前统一调用的函数原型 */
@@ -60,9 +60,9 @@ typedef int (*nluaV_InstructionStart) (lua_State* L, Instruction *pins);
 /* 指令处理返回前调用的函数原型 */
 typedef int (*nluaV_InstructionEnd) (lua_State* L, Instruction *pins);
 /* 加密指令 */
-typedef int (*nluaV_EnInstruction) (lua_State* L, Instruction *pins);
+typedef int (*nluaV_EnInstruction) (lua_State* L, Instruction *pins, unsigned int key);
 /* 解密指令 */
-typedef int (*nluaV_DeInstruction) (lua_State* L, Instruction *pins);
+typedef int (*nluaV_DeInstruction) (lua_State* L, Instruction *pins, unsigned int key);
 /* 加密指令数据 */
 typedef int (*nluaV_EnInstructionData) (lua_State* L, Instruction *pins);
 /* 解密指令数据 */
@@ -73,30 +73,16 @@ typedef int (*nluaV_EnBuffer) (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*
 typedef int (*nluaV_DeBuffer) (lua_State* L, lu_int32 key, lu_byte *p1, lu_byte*p2, int bsize);
 /* 制作文件形式的密钥 */
 typedef lu_int32 (*nluaV_MakeFileKey) (lua_State* L, const char *path);
-/* 指令处理原型 */
-typedef int (*nluaV_Instruction) (lua_State* L, Instruction ins, StkId* base, LClosure* cl,
-  const Instruction** pc, int* pnexeccalls);
-
-/* 指令编码结构 */
-typedef struct OPCODE_RULE {
-  OpCode optab[NUM_OPCODES];                  /* opcode编码表 */
-  OpRun opmods[NUM_OPCODES];                  /* opcode模式表 */
-  nluaV_Instruction opcodedisp[NUM_OPCODES];  /* opcode分派函数 */
-  const char* opnames[NUM_OPCODES+1];         /* opcode名称表 */
-} OPR;
 
 
 #define NLUA_SIGN_BOOTED          0x01
 #define NLUA_SIGN_COMPILER        0x02
-#define NLUA_SIGN_OPTED           0x04
 
 #define ns_set_booted(s)          ((s) |= NLUA_SIGN_BOOTED)
 #define ns_set_compiler(s)        ((s) |= NLUA_SIGN_COMPILER)
-#define ns_set_opted(s)           ((s) |= NLUA_SIGN_OPTED)
 
 #define ns_get_booted(s)          ((s) & NLUA_SIGN_BOOTED)
 #define ns_get_compiler(s)        ((s) & NLUA_SIGN_COMPILER)
-#define ns_get_opted(s)           ((s) & NLUA_SIGN_OPTED)
 
 #define MAX_KEY_PATH              128
 /* `全局状态`,所有的线程共享这个状态 */
@@ -127,14 +113,15 @@ typedef struct global_State {
   struct Table *mt[NUM_TAGS];       /* 元操作表 */
   TString *tmname[TM_N];            /* 元操作名称表 */
   
-  /* nlua
+  /* 
+   * nlua 
    */
+  
+  /* 这里是nlua的设置 */
   int sign;                         /* 全局标记 */
   OPR oprule;                       /* opcode编码规则 */
-  unsigned int nopt;                /* nlua的安全选项 */
+  int nopt;                         /* nlua的安全选项 */
   unsigned int ekey;                /* 解密所需的密码 */
-  
-  //Table* clotab;                    /* 闭包纪录表 */
   
   /* 指令调用前后要执行的函数 */
   nluaV_InstructionStart istart;    /* 指令开始前执行的函数 */
@@ -182,6 +169,10 @@ struct lua_State {
 /* 从本地线程状态返回全局状态 */
 #define G(L)	(L->l_G)
 
+/* 获取opcode */
+#define L_OP(L, I)        (G(L)->oprule.optab[(I)])
+#define R_OP(r, I)        ((r)->optab[(I)])
+
 /* 所有可回收内存对象的联合体 */
 union GCObject {
   GCheader gch;
@@ -217,10 +208,13 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
 /*
  * nlua
  */
-LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt);
+LUAI_FUNC void nluaE_setopt (lua_State *L, int opt);
+LUAI_FUNC int nluaE_getopt (lua_State *L);
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key);
-LUAI_FUNC void nluaE_setsign (lua_State *L, int compiler, int opted);
-LUAI_FUNC int nluaE_getsign (lua_State *L);
+LUAI_FUNC unsigned int nluaE_getkey (lua_State *L);
+LUAI_FUNC void nluaE_setcs (lua_State *L);
+LUAI_FUNC int nluaE_getcs (lua_State *L);
+LUAI_FUNC OPR *nluaE_getopr (lua_State *L);
 
 #endif
 

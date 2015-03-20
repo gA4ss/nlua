@@ -75,8 +75,8 @@ static void PrintConstant(const Proto* f, int i) {
 }
 
 static void PrintCode(lua_State* L, const Proto* f) {
-  OPR* opr = R(L);
-  unsigned int opt = G(L)->nopt;
+  OPR* opr = &(f->rule.oprule);
+  unsigned int opt = f->rule.nopt;
   const Instruction* code=f->code;
   int pc,n=f->sizecode;
   nluaV_DeInstruction deins = G(L)->ideins;
@@ -94,12 +94,11 @@ static void PrintCode(lua_State* L, const Proto* f) {
     
     if (nlo_opt_ei(opt)) {
       if (pc==0) {
-        key=NLUA_DEF_KEY;
+        key=f->rule.ekey;
       } else {
         key=crc32((unsigned char*)&code[pc-1], sizeof(Instruction));
       }
-      nluaE_setkey(L, key);
-      deins(L, &i);
+      deins(L, &i, key);
     }
     
     if (nlo_opt_eid(opt)) {
@@ -122,42 +121,42 @@ static void PrintCode(lua_State* L, const Proto* f) {
     printf("%-9s\t",opr->opnames[o]);
     
     /* 判断操作模式 */
-    switch (nluaP_getopmode(L, o)) {
+    switch (nluaP_getopmode(L, f, o)) {
       case iABC:
         printf("%d",a);
-        if (nluaP_getbmode(L, o)!=OpArgN) printf(" %d",ISK(b) ? (-1-INDEXK(b)) : b);
-        if (nluaP_getcmode(L, o)!=OpArgN) printf(" %d",ISK(c) ? (-1-INDEXK(c)) : c);
+        if (nluaP_getbmode(L, f, o)!=OpArgN) printf(" %d",ISK(b) ? (-1-INDEXK(b)) : b);
+        if (nluaP_getcmode(L, f, o)!=OpArgN) printf(" %d",ISK(c) ? (-1-INDEXK(c)) : c);
         break;
       case iABx:
-        if (nluaP_getbmode(L, o)==OpArgK) printf("%d %d",a,-1-bx); else printf("%d %d",a,bx);
+        if (nluaP_getbmode(L, f, o)==OpArgK) printf("%d %d",a,-1-bx); else printf("%d %d",a,bx);
         break;
       case iAsBx:
-        if (o==OP_JMP) printf("%d",sbx); else printf("%d %d",a,sbx);
+        if (o==P_OP(f, I_JMP)) printf("%d",sbx); else printf("%d %d",a,sbx);
         break;
     }
     
     /* 打印指令的数据部分 */
-    if (o==OP_LOADK) {
+    if (o==P_OP(f,I_LOADK)) {
       printf("\t; "); PrintConstant(f,bx);
-    } else if ((o==OP_GETUPVAL) || (o==OP_SETUPVAL)) {
+    } else if ((o==P_OP(f,I_GETUPVAL)) || (o==P_OP(f,I_SETUPVAL))) {
       printf("\t; %s", (f->sizeupvalues>0) ? getstr(f->upvalues[b]) : "-");
-    } else if ((o==OP_GETGLOBAL) || (o==OP_SETGLOBAL)) {
+    } else if ((o==P_OP(f,I_GETGLOBAL)) || (o==P_OP(f,I_SETGLOBAL))) {
       printf("\t; %s",svalue(&f->k[bx]));
-    } else if ((o==OP_GETTABLE) || (o==OP_SELF)) {
+    } else if ((o==P_OP(f,I_GETTABLE)) || (o==P_OP(f,I_SELF))) {
       if (ISK(c)) { printf("\t; "); PrintConstant(f,INDEXK(c)); }
-    } else if ((o==OP_SETTABLE) || (o==OP_ADD) || (o==OP_SUB) || (o==OP_MUL) ||
-               (o==OP_DIV) || (o==OP_POW) || (o==OP_EQ) || (o==OP_LT) || (o==OP_LE)) {
+    } else if ((o==P_OP(f,I_SETTABLE)) || (o==P_OP(f,I_ADD)) || (o==P_OP(f,I_SUB)) || (o==P_OP(f,I_MUL)) ||
+               (o==P_OP(f,I_DIV)) || (o==P_OP(f,I_POW)) || (o==P_OP(f,I_EQ)) || (o==P_OP(f,I_LT)) || (o==P_OP(f,I_LE))) {
       if (ISK(b) || ISK(c)) {
         printf("\t; ");
         if (ISK(b)) PrintConstant(f,INDEXK(b)); else printf("-");
         printf(" ");
         if (ISK(c)) PrintConstant(f,INDEXK(c)); else printf("-");
       }
-    } else if ((o==OP_JMP) || (o==OP_FORLOOP) || (o==OP_FORPREP)) {
+    } else if ((o==P_OP(f,I_JMP)) || (o==P_OP(f,I_FORLOOP)) || (o==P_OP(f,I_FORPREP))) {
       printf("\t; to %d",sbx+pc+2);
-    } else if (o==OP_CLOSURE) {
+    } else if (o==P_OP(f,I_CLOSURE)) {
       printf("\t; %p",VOID(f->p[bx]));
-    } else if (o==OP_SETLIST) {
+    } else if (o==P_OP(f,I_SETLIST)) {
       if (c==0) printf("\t; %d",(int)code[++pc]);
       else printf("\t; %d",c);
     }

@@ -393,7 +393,7 @@ LUA_API size_t lua_objlen (lua_State *L, int idx) {
   }
 }
 
-
+/* 将idx的内容转换为函数 */
 LUA_API lua_CFunction lua_tocfunction (lua_State *L, int idx) {
   StkId o = index2adr(L, idx);
   return (!iscfunction(o)) ? NULL : clvalue(o)->c.f;

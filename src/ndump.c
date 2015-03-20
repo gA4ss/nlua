@@ -208,7 +208,7 @@ static void DumpOptions(DumpState* D) {
 
 static void DumpOpcodeTable(lua_State* L, DumpState* D) {
   OpCode tab[NUM_OPCODES];
-  nluaV_oprwrite(G(L),tab);
+  nluaV_oprwrite(L,R(L),tab);
   DumpBlock(tab,sizeof(tab),D);
 }
 
@@ -229,9 +229,6 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   } else {
     D.dkey=ekey;
   }
-  
-  /* 设置key */
-  nluaE_setkey(L, NLUA_DEF_KEY);
   
   /* 加密NagaOpt密钥 */
   if (nlo_ef(nopt) || (nlo_ed(nopt))) {

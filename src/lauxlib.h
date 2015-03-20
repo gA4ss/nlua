@@ -97,7 +97,8 @@ LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
  * eid 加密指令数据
  * ei 加密整条指令
  */
-LUALIB_API int (nluaL_setopts) (lua_State *L, int rop, int eid, int ei);
+LUALIB_API int (nluaL_setopts) (lua_State *L, int rop, int eid, int ei,
+                                unsigned int ekey);
 
 /*
 ** ===============================================================

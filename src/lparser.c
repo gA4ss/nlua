@@ -311,6 +311,7 @@ static void enterblock (FuncState *fs, BlockCnt *bl, lu_byte isbreakable) {
 
 /* 离开代码块 */
 static void leaveblock (FuncState *fs) {
+  Proto *f = fs->f;
   BlockCnt *bl = fs->bl;
   /* 恢复代码块节点 */
   fs->bl = bl->previous;
@@ -320,7 +321,7 @@ static void leaveblock (FuncState *fs) {
   
   /* 如果这个代码块有upvalue则关闭 */
   if (bl->upval)
-    luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
+    luaK_codeABC(fs, P_OP(f,I_CLOSE), bl->nactvar, 0, 0);
   /* 运行到这里，代码块不能是不可退出的并且没有upvalue */
   lua_assert(!bl->isbreakable || !bl->upval);
   /* 当前代码块与当前函数的总活动变量相等，因为运行了removevars函数 */
@@ -340,9 +341,9 @@ static void pushclosure (LexState *ls, FuncState *func, expdesc *v) {
   while (oldsize < f->sizep) f->p[oldsize++] = NULL;
   f->p[fs->np++] = func->f;
   luaC_objbarrier(ls->L, f, func->f);
-  init_exp(v, VRELOCABLE, luaK_codeABx(fs, OP_CLOSURE, 0, fs->np-1));
+  init_exp(v, VRELOCABLE, luaK_codeABx(fs, P_OP(f,I_CLOSURE), 0, fs->np-1));
   for (i=0; i<func->f->nups; i++) {
-    OpCode o = (func->upvalues[i].k == VLOCAL) ? OP_MOVE : OP_GETUPVAL;
+    OpCode o = (func->upvalues[i].k == VLOCAL) ? P_OP(f,I_MOVE) : P_OP(f,I_GETUPVAL);
     luaK_codeABC(fs, o, 0, func->upvalues[i].info, 0);
   }
 }
@@ -368,6 +369,12 @@ static void open_func (LexState *ls, FuncState *fs) {
   f->source = ls->source;
   f->maxstacksize = 2;              /* 函数原型与表所占 */
   fs->h = luaH_new(L, 0, 0);        /* 哈希表 */
+  
+  /* 设置很重要的参数 */
+  memcpy(&(f->rule.oprule), &(G(L)->oprule), sizeof(OPR));
+  f->rule.ekey = G(L)->ekey;
+  f->rule.nopt = G(L)->nopt;
+  
   sethvalue2s(L, L->top, fs->h);    /* 将函数的表设定到栈顶 */
   incr_top(L);
   setptvalue2s(L, L->top, f);       /* 将当前函数原型指针设置到栈顶 */
@@ -481,6 +488,7 @@ struct ConsControl {
 static void recfield (LexState *ls, struct ConsControl *cc) {
   /* recfield -> (NAME | `['exp1`]') = exp1 */
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int reg = ls->fs->freereg;
   expdesc key, val;
   int rkkey;
@@ -494,7 +502,7 @@ static void recfield (LexState *ls, struct ConsControl *cc) {
   checknext(ls, '=');
   rkkey = luaK_exp2RK(fs, &key);
   expr(ls, &val);
-  luaK_codeABC(fs, OP_SETTABLE, cc->t->u.s.info, rkkey, luaK_exp2RK(fs, &val));
+  luaK_codeABC(fs, P_OP(f,I_SETTABLE), cc->t->u.s.info, rkkey, luaK_exp2RK(fs, &val));
   fs->freereg = reg;  /* free registers */
 }
 
@@ -536,8 +544,9 @@ static void listfield (LexState *ls, struct ConsControl *cc) {
 static void constructor (LexState *ls, expdesc *t) {
   /* constructor -> ?? */
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int line = ls->linenumber;
-  int pc = luaK_codeABC(fs, OP_NEWTABLE, 0, 0, 0);
+  int pc = luaK_codeABC(fs, P_OP(f,I_NEWTABLE), 0, 0, 0);
   struct ConsControl cc;
   cc.na = cc.nh = cc.tostore = 0;
   cc.t = t;
@@ -646,6 +655,7 @@ static int explist1 (LexState *ls, expdesc *v) {
 
 static void funcargs (LexState *ls, expdesc *f) {
   FuncState *fs = ls->fs;
+  Proto *p = fs->f;
   expdesc args;
   int base, nparams;
   int line = ls->linenumber;
@@ -686,7 +696,7 @@ static void funcargs (LexState *ls, expdesc *f) {
       luaK_exp2nextreg(fs, &args);  /* close last argument */
     nparams = fs->freereg - (base+1);
   }
-  init_exp(f, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams+1, 2));
+  init_exp(f, VCALL, luaK_codeABC(fs, P_OP(p,I_CALL), base, nparams+1, 2));
   luaK_fixline(fs, line);
   fs->freereg = base+1;  /* call remove function and arguments and leaves
                             (unless changed) one result */
@@ -772,6 +782,7 @@ static void primaryexp (LexState *ls, expdesc *v) {
 static void simpleexp (LexState *ls, expdesc *v) {
   /* simpleexp -> NUMBER | STRING | NIL | true | false | ... |
                   constructor | FUNCTION body | primaryexp */
+  Proto *f = ls->fs->f;
   switch (ls->t.token) {
     case TK_NUMBER: {
       init_exp(v, VKNUM, 0);
@@ -799,7 +810,7 @@ static void simpleexp (LexState *ls, expdesc *v) {
       check_condition(ls, fs->f->is_vararg,
                       "cannot use " LUA_QL("...") " outside a vararg function");
       fs->f->is_vararg &= ~VARARG_NEEDSARG;  /* don't need 'arg' */
-      init_exp(v, VVARARG, luaK_codeABC(fs, OP_VARARG, 0, 1, 0));
+      init_exp(v, VVARARG, luaK_codeABC(fs, P_OP(f,I_VARARG), 0, 1, 0));
       break;
     }
     case '{': {  /* constructor */
@@ -968,6 +979,7 @@ struct LHS_assign {
 */
 static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int extra = fs->freereg;  /* eventual position to save local variable */
   int conflict = 0;
   for (; lh; lh = lh->prev) {
@@ -983,7 +995,7 @@ static void check_conflict (LexState *ls, struct LHS_assign *lh, expdesc *v) {
     }
   }
   if (conflict) {
-    luaK_codeABC(fs, OP_MOVE, fs->freereg, v->u.s.info, 0);  /* make copy */
+    luaK_codeABC(fs, P_OP(f,I_MOVE), fs->freereg, v->u.s.info, 0);  /* make copy */
     luaK_reserveregs(fs, 1);
   }
 }
@@ -1037,6 +1049,7 @@ static int cond (LexState *ls) {
  */
 static void breakstat (LexState *ls) {
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   BlockCnt *bl = fs->bl;
   int upval = 0;
   /* 回溯代码块指针
@@ -1050,7 +1063,7 @@ static void breakstat (LexState *ls) {
     luaX_syntaxerror(ls, "no loop to break");
   /* 存在upvalue则写入一条关闭upvalue的指令 */
   if (upval)
-    luaK_codeABC(fs, OP_CLOSE, bl->nactvar, 0, 0);
+    luaK_codeABC(fs, P_OP(f,I_CLOSE), bl->nactvar, 0, 0);
   luaK_concat(fs, &bl->breaklist, luaK_jump(fs));
 }
 
@@ -1114,19 +1127,20 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
   /* forbody -> DO block */
   BlockCnt bl;
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int prep, endfor;
   adjustlocalvars(ls, 3);  /* control variables */
   checknext(ls, TK_DO);
-  prep = isnum ? luaK_codeAsBx(fs, OP_FORPREP, base, NO_JUMP) : luaK_jump(fs);
+  prep = isnum ? luaK_codeAsBx(fs, P_OP(f,I_FORPREP), base, NO_JUMP) : luaK_jump(fs);
   enterblock(fs, &bl, 0);  /* scope for declared variables */
   adjustlocalvars(ls, nvars);
   luaK_reserveregs(fs, nvars);
   block(ls);
   leaveblock(fs);  /* end of scope for declared variables */
   luaK_patchtohere(fs, prep);
-  endfor = (isnum) ? luaK_codeAsBx(fs, OP_FORLOOP, base, NO_JUMP) :
-                     luaK_codeABC(fs, OP_TFORLOOP, base, 0, nvars);
-  luaK_fixline(fs, line);  /* pretend that `OP_FOR' starts the loop */
+  endfor = (isnum) ? luaK_codeAsBx(fs, P_OP(f,I_FORLOOP), base, NO_JUMP) :
+                     luaK_codeABC(fs, P_OP(f,I_TFORLOOP), base, 0, nvars);
+  luaK_fixline(fs, line);  /* pretend that `I_FOR' starts the loop */
   luaK_patchlist(fs, (isnum ? endfor : luaK_jump(fs)), prep + 1);
 }
 
@@ -1134,6 +1148,7 @@ static void forbody (LexState *ls, int base, int line, int nvars, int isnum) {
 static void fornum (LexState *ls, TString *varname, int line) {
   /* fornum -> NAME = exp1,exp1[,exp1] forbody */
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   int base = fs->freereg;
   new_localvarliteral(ls, "(for index)", 0);
   new_localvarliteral(ls, "(for limit)", 1);
@@ -1146,7 +1161,7 @@ static void fornum (LexState *ls, TString *varname, int line) {
   if (testnext(ls, ','))
     exp1(ls);  /* optional step */
   else {  /* default step = 1 */
-    luaK_codeABx(fs, OP_LOADK, fs->freereg, luaK_numberK(fs, 1));
+    luaK_codeABx(fs, P_OP(f,I_LOADK), fs->freereg, luaK_numberK(fs, 1));
     luaK_reserveregs(fs, 1);
   }
   forbody(ls, base, line, 1, 1);
@@ -1312,6 +1327,7 @@ static void exprstat (LexState *ls) {
 static void retstat (LexState *ls) {
   /* stat -> RETURN explist */
   FuncState *fs = ls->fs;
+  Proto *f = fs->f;
   expdesc e;
   int first, nret;  /* registers with returned values */
   luaX_next(ls);  /* skip RETURN */
@@ -1322,7 +1338,7 @@ static void retstat (LexState *ls) {
     if (hasmultret(e.k)) {
       luaK_setmultret(fs, &e);
       if (e.k == VCALL && nret == 1) {  /* tail call? */
-        SET_OPCODE(getcode(fs,&e), OP_TAILCALL);
+        SET_OPCODE(getcode(fs,&e), P_OP(f,I_TAILCALL));
         lua_assert(GETARG_A(getcode(fs,&e)) == fs->nactvar);
       }
       first = fs->nactvar;

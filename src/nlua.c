@@ -170,19 +170,12 @@ static void generate_opnames(const char** on, OpCode* tab) {
 
 /* opcode随机初始化
  * L 虚拟机状态指针
- * opcode随机化一定开启
  */
-void nluaV_oprinit(global_State* g) {
-  OPR *r = &(g->oprule);
-  unsigned int opt = g->nopt;
-  
+void nluaV_oprinit(lua_State* L, OPR *opr) {
+  OPR *r = opr;
+  UNUSED(L);
   /* 初始化编码表 */
   init_optab();
-  
-  /* 对opcode表进行随机化 */
-  if (nlo_opt_rop(opt)) {
-    generate_roptab(r->optab);
-  }
   
   /* 根据编码表对派遣函数表以及操作模式表进行初始化 */
   nluaP_oprecode(r->optab);
@@ -191,29 +184,36 @@ void nluaV_oprinit(global_State* g) {
   generate_opnames(r->opnames, r->optab);
 }
 
-/* opcode表根据L中的数值重新设置
- * L 虚拟机状态指针
+/* 随机opcode
  */
-void nluaV_opreset(global_State* g) {
-  OPR *r = &(g->oprule);
-  //unsigned int opt = G(L)->nopt;
+void nluaV_oprrand(lua_State* L, OPR *opr) {
+  OPR *r = opr;
   
-  nluaP_opinit();
+  /* 初始化编码表 */
+  init_optab();
+  
+  generate_roptab(r->optab);
   
   /* 根据编码表对派遣函数表以及操作模式表进行初始化 */
   nluaP_oprecode(r->optab);
   generate_opdtab(r->opcodedisp, r->optab);
   generate_opmodes(r->opmods, r->optab);
   generate_opnames(r->opnames, r->optab);
+}
+
+/* 随机opcode
+ */
+void nluaV_oprrand_global(lua_State* L) {
+  nluaV_oprrand(L, &(G(L)->oprule));
 }
 
 /* opcode规则表到虚拟机状态
  * L 虚拟机状态指针
  * tab 要读取的opcode表
  */
-void nluaV_oprread(global_State* g, OpCode* tab) {
-  OPR *r = &(g->oprule);
-  
+void nluaV_oprread (lua_State* L, OPR *opr, OpCode* tab) {
+  OPR *r = opr;
+  UNUSED(L);
   /* 对表进行读取 */
   memcpy(&r->optab[0], tab, sizeof(r->optab));
   nluaP_opinit();
@@ -229,16 +229,20 @@ void nluaV_oprread(global_State* g, OpCode* tab) {
  * L 虚拟机状态指针
  * tab 要填充的opcode表
  */
-void nluaV_oprwrite(global_State* g, OpCode* tab) {
-  memcpy(tab, g->oprule.optab, sizeof(g->oprule.optab));//sizeof(OpCode)*NUM_OPCODES
+void nluaV_oprwrite (lua_State* L, OPR *opr, OpCode* tab) {
+  UNUSED(L);
+  memcpy(tab, opr->optab, sizeof(opr->optab));//sizeof(OpCode)*NUM_OPCODES
 }
 
 /* 指令opcode转换
  * 将一条指令经过随机话的指令按照另外一张表重现编码
  */
-Instruction nluaV_remap(global_State* g, Instruction ins, OpCode *tabf, OpCode *tabt) {
+Instruction nluaV_remap(lua_State* L, Instruction ins, OpCode *tabf, OpCode *tabt) {
   OpCode o, z;
   int i;
+  
+  UNUSED(L);
+  
   /* 取出指令的opcode */
   o = GET_OPCODE(ins);
   /* 通过它的编码表找回原始的值 */
@@ -260,10 +264,10 @@ Instruction nluaV_remap(global_State* g, Instruction ins, OpCode *tabf, OpCode *
 /* 指令opcode转换
  * 将一条指令经过随机话的指令按照当前编码表
  */
-Instruction nluaV_remap_onnow(global_State* g, Instruction ins, OpCode *tabf) {
+Instruction nluaV_remap_onnow(lua_State* L, Instruction ins, OpCode *tabf) {
   OpCode *tabt;
-  tabt = &(g->oprule.optab[0]);
-  return nluaV_remap(g, ins, tabf, tabt);
+  tabt = &(G(L)->oprule.optab[0]);
+  return nluaV_remap(L, ins, tabf, tabt);
 }
 
 /* 指令开始执行前作的动作
@@ -271,12 +275,15 @@ Instruction nluaV_remap_onnow(global_State* g, Instruction ins, OpCode *tabf) {
  * pins 当前要执行指令的指针
  */
 int nluaV_insstart(lua_State* L, Instruction* pins) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
+  Proto *p;
+  int opt;
+  lua_assert(isLua(L->ci));       /* 必须是lua函数 */
+  p = clvalue(L->ci->func)->l.p;
+  opt = p->rule.nopt;
   
   /* 是否解密指令数据 */
   if (nlo_opt_eid(opt)) {
-    nluaV_DeInstructionData deidata = g->ideidata;
+    nluaV_DeInstructionData deidata = G(L)->ideidata;
     deidata(L, pins);
   }
   
@@ -288,10 +295,13 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
  * pins 当前要执行指令的指针
  */
 int nluaV_insend(lua_State *L, Instruction* pins) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
+  Proto *p;
+  int opt;
+  lua_assert(isLua(L->ci));       /* 必须是lua函数 */
+  p = clvalue(L->ci->func)->l.p;
+  opt = p->rule.nopt;
   
-  UNUSED(g);
+  UNUSED(p);
   UNUSED(opt);
   return 0;
 }
@@ -300,24 +310,18 @@ int nluaV_insend(lua_State *L, Instruction* pins) {
  * L 虚拟机状态指针
  * pins 当前要执行指令的指针
  */
-int nluaV_enins(lua_State* L, Instruction* pins) {
-  unsigned int key;
-  global_State* g = G(L);
-  key=g->ekey;
-  return g->enbuf(L, key, (unsigned char*)pins,
-                  (unsigned char*)pins, sizeof(Instruction));
+int nluaV_enins(lua_State* L, Instruction* pins, unsigned int key) {
+  return G(L)->enbuf(L, key, (unsigned char*)pins,
+                     (unsigned char*)pins, sizeof(Instruction));
 }
 
 /* 解密指令部分
  * L 虚拟机状态指针
  * pins 当前要执行指令的指针
  */
-int nluaV_deins(lua_State* L, Instruction* pins) {
-  unsigned int key;
-  global_State* g = G(L);
-  key=g->ekey;
-  return g->debuf(L, key, (unsigned char*)pins,
-                  (unsigned char*)pins, sizeof(Instruction));
+int nluaV_deins(lua_State* L, Instruction* pins, unsigned int key) {
+  return G(L)->debuf(L, key, (unsigned char*)pins,
+                     (unsigned char*)pins, sizeof(Instruction));
 }
 
 /* 加密缓存
@@ -410,22 +414,38 @@ int nluaV_deidata (lua_State* L, Instruction* pins) {
 
 int nluaV_enproc(lua_State* L, const Proto* f) {
   int i;
-  global_State* g = G(L);
+  
   /* 计算这个key，可以关联其他保密数据 */
   //unsigned int key = crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
-  unsigned int key = NLUA_DEF_KEY;
+  unsigned int key = f->rule.ekey;
   /* 加密第一条代码 */
-  nluaE_setkey(L, key);
-  g->ienins(L,&(f->code[0]));
+  G(L)->ienins(L,&(f->code[0]), key);
   
   /* 加密其余指令 */
   for (i=1; i<f->sizecode; i++) {
     /* 使用其他指令的密文hash作为key */
     key = crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
-    nluaE_setkey(L, key);
-    g->ienins(L,&(f->code[i]));
+    G(L)->ienins(L,&(f->code[i]), key);
   }
   
   return f->sizecode;
 }
 
+LUAI_FUNC int nluaV_deproc(lua_State* L, const Proto* f) {
+  int i;
+  
+  /* 计算这个key，可以关联其他保密数据 */
+  //unsigned int key = crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
+  unsigned int key = f->rule.ekey;
+  /* 加密第一条代码 */
+  G(L)->ideins(L,&(f->code[0]), key);
+  
+  /* 加密其余指令 */
+  for (i=1; i<f->sizecode; i++) {
+    /* 使用其他指令的密文hash作为key */
+    key = crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
+    G(L)->ideins(L,&(f->code[i]), key);
+  }
+  
+  return f->sizecode;
+}

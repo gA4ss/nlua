@@ -18,13 +18,14 @@
 
 /* 字节码读取结构 */
 typedef struct {
-  lua_State* L;        /* 线程状态指针 */
-  ZIO* Z;              /* 字节码IO结构指针 */
-  Mbuffer* b;          /* scanner使用的缓存 */
-  const char* name;    /* 代码名称 */
-  unsigned int key;    /* 加密文件所需的密码 */
-  unsigned int dkey;   /* 加密数据所需的密码 */
-  NagaLuaOpt opt;      /* 所需的选项 */
+  lua_State* L;         /* 线程状态指针 */
+  ZIO* Z;               /* 字节码IO结构指针 */
+  Mbuffer* b;           /* scanner使用的缓存 */
+  const char* name;     /* 代码名称 */
+  unsigned int key;     /* 加密文件所需的密码 */
+  unsigned int dkey;    /* 加密数据所需的密码 */
+  NagaLuaOpt opt;       /* 所需的选项 */
+  nlua_Rule rule;       /* 编码规则 */
 } LoadState;
 
 /* 一些出错输出宏 */
@@ -204,6 +205,12 @@ static Proto* LoadFunction(LoadState* S, TString* p) {
   f->numparams=LoadByte(S);               /* 这份代码的参数个数 */
   f->is_vararg=LoadByte(S);               /* 这份代码是否是多参数 */
   f->maxstacksize=LoadByte(S);            /* 最大的栈深度 */
+  
+  /* 设置很重要的参数 */
+  memcpy(&(f->rule.oprule), &(S->rule.oprule), sizeof(OPR));
+  f->rule.ekey = S->rule.ekey;
+  f->rule.nopt = S->rule.nopt;
+  
   LoadCode(S,f);                          /* 读取代码 */
   LoadConstants(S,f);                     /* 读取常量 */
   LoadDebug(S,f);                         /* 读取调试信息 */
@@ -243,20 +250,12 @@ static void LoadHeader(LoadState* S) {
  * 这里要判断是否进行了加密操作，是否拥有密码
  * 如果密码长度不为空则
  */
-static void LoadOptions(LoadState* S, unsigned int *lopts) {
+static void LoadOptions(LoadState* S) {
   NagaLuaOpt* nopt;
 
   nopt = &(S->opt);
   /* 读取一个选项 */
   LoadBlockForce(S,nopt,sizeof(NagaLuaOpt));
-  
-  /* 如果此L是个处女则直接设置当前的opt为全局opt */
-  if (ns_get_opted(nluaE_getsign(S->L)) == 0) {
-    nluaE_setopt(S->L, nopt->opt);
-  }
-  
-  /* 保存局部选项 */
-  *lopts = nopt->opt;
   
   /* 解密NagaOpt密钥 */
   if (nopt->ks) {
@@ -303,28 +302,24 @@ static void LoadOptions(LoadState* S, unsigned int *lopts) {
     free(realk);
   }/* end if */
   
+  /* 设置选项 */
+  S->rule.nopt = nopt->opt;
   
   /* 设置解密指令的密码 
    * 这个密码必须是唯一并且一致的
    * 所有加载起来的nlua或者lua都要按照此来解密命令
    */
-  if (nlo_ei(nopt)) {
-    nluaE_setkey(S->L, NLUA_DEF_KEY);
+  //if (nlo_ei(nopt))
+  {
+    S->rule.ekey = NLUA_DEF_KEY;
   }
 }
 
-static void LoadOpcodeTable(LoadState* S, OpCode *t) {
+static void LoadOpcodeTable(LoadState* S) {
   OpCode tab[NUM_OPCODES];
   LoadBlock(S,tab,sizeof(tab));
-  
-  if (t) {
-    memcpy(t, tab, sizeof(OpCode)*NUM_OPCODES);
-  }
-  
-  /* 如果配置已经加载则这里不起作用 */
-  if (ns_get_opted(nluaE_getsign(S->L)) == 0) {
-    nluaV_oprread(G(S->L),tab);
-  }
+  /* 进行读取 */
+  nluaV_oprread(S->L, &(S->rule.oprule), tab);
 }
 
 /* 加载预编译代码
@@ -334,8 +329,7 @@ static void LoadOpcodeTable(LoadState* S, OpCode *t) {
  * name 这段代码的名称
  * lnopt 本地naga选项
  */
-Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name,
-                     unsigned int *opts, OpCode *tab) {
+Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name) {
   LoadState S;
   
   /* 设置不同的程序名称 */
@@ -351,9 +345,9 @@ Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name,
   
   /* 加载字节码文件头 */
   LoadHeader(&S);
-  LoadOptions(&S, opts);
+  LoadOptions(&S);
   /* 建立密码 */
-  LoadOpcodeTable(&S, tab);
+  LoadOpcodeTable(&S);
   return LoadFunction(&S,luaS_newliteral(L,"=?"));
 }
 

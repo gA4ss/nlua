@@ -393,13 +393,14 @@ typedef enum {
   (void)k; \
   lua_assert((*base) == L->base && L->base == L->ci->base); \
   lua_assert((*base) <= L->top && L->top <= L->stack + L->stacksize); \
-  lua_assert(L->top == L->ci->top || luaG_checkopenop(ins));
+  lua_assert(L->top == L->ci->top || luaG_checkopenop(cl->p,ins));
 
 /* 解密指令 */
 static Instruction deins(lua_State *L, Instruction ins,
                          const LClosure *cl, const Instruction *pc) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
+  Proto *p = cl->p;
+  unsigned int opt = p->rule.nopt;
+  unsigned int key;
   
   /* 是否解密指令 */
   if (nlo_opt_ei(opt)) {
@@ -409,13 +410,12 @@ static Instruction deins(lua_State *L, Instruction ins,
      * 判断地址是否相等
      */
     if (&(cl->p->code[0]) == pc) {
-      nluaE_setkey(L, NLUA_DEF_KEY);
+      key = p->rule.ekey;
     } else {
       Instruction pins = *(pc-1);
-      unsigned int key = crc32((unsigned char*)&pins, sizeof(Instruction));
-      nluaE_setkey(L, key);
+      key = crc32((unsigned char*)&pins, sizeof(Instruction));
     }
-    ideins(L, &ins);
+    ideins(L, &ins, key);
   }
   
   return ins;
@@ -423,8 +423,8 @@ static Instruction deins(lua_State *L, Instruction ins,
 
 /* 读取pc值的内容 */
 static Instruction readpc(lua_State*L, const LClosure *cl, const Instruction *pc) {
-  global_State* g = G(L);
-  unsigned int opt = g->nopt;
+  Proto *p = cl->p;
+  unsigned int opt = p->rule.nopt;
   Instruction ins = *pc;
   
   /* 是否解密指令 */
@@ -434,7 +434,7 @@ static Instruction readpc(lua_State*L, const LClosure *cl, const Instruction *pc
   
   /* 是否解密指令数据 */
   if (nlo_opt_eid(opt)) {
-    nluaV_DeInstructionData deidata = g->ideidata;
+    nluaV_DeInstructionData deidata = G(L)->ideidata;
     deidata(L, &ins);
   }
   
@@ -1059,6 +1059,7 @@ nluaV_Instruction nluaV_opcodedisp[NUM_OPCODES] = {
 void luaV_execute (lua_State *L, int nexeccalls) {
   LClosure *cl;
   StkId base;
+  Proto *p;
   //TValue *k;
   const Instruction *pc;
   nluaV_Instruction disp;
@@ -1068,6 +1069,7 @@ reentry:  /* 重新进入点 */
   pc = L->savedpc;                /* 获取当前的pc值 */
   cl = &clvalue(L->ci->func)->l;  /* 获取当前的函数结构指针 */
   base = L->base;                 /* 获取当前的栈基 */
+  p = cl->p;                      /* 当前函数原型 */
   //k = cl->p->k;                 /* 获取当前的常量队列 */
   
   /* 解释主循环 */
@@ -1096,11 +1098,11 @@ reentry:  /* 重新进入点 */
     ra = base+GETARG_A(i);
     lua_assert(base == L->base && L->base == L->ci->base);
     lua_assert(base <= L->top && L->top <= L->stack + L->stacksize);
-    lua_assert(L->top == L->ci->top || luaG_checkopenop(i));
+    lua_assert(L->top == L->ci->top || luaG_checkopenop(p,i));
     o = GET_OPCODE(i);
     
     /* 调用派遣函数 */
-    disp = G(L)->oprule.opcodedisp[o];
+    disp = p->rule.oprule.opcodedisp[o];
     ret = disp(L, i, &base, cl, &pc, &nexeccalls);
     switch (ret) {
       case OPCODE_DISPATCH_CONTINUE:

@@ -189,11 +189,23 @@ static Proto* LoadFunction(LoadState* S, TString* p) {
   f->numparams=LoadByte(S);               /* 这份代码的参数个数 */
   f->is_vararg=LoadByte(S);               /* 这份代码是否是多参数 */
   f->maxstacksize=LoadByte(S);            /* 最大的栈深度 */
+  
+  /* 设置很重要的参数 
+   * luc有着正规的设定
+   * 所以这里的随机表使用最原始的
+   */
+  {
+    OPR oprule;
+    nluaV_oprinit(S->L, &oprule);
+    memcpy(&(f->rule.oprule), &oprule, sizeof(OPR));
+  }
+  f->rule.ekey = 0;
+  f->rule.nopt = 0;
+  
   LoadCode(S,f);                          /* 读取代码 */
   LoadConstants(S,f);                     /* 读取常量 */
   LoadDebug(S,f);                         /* 读取调试信息 */
   
-  /* 如果出错则退出 */
   IF (!luaG_checkcode(S->L, f), "bad code");
   
   /* 栈的恢复 */
@@ -211,8 +223,11 @@ static void LoadHeader(LoadState* S) {
   luaU_header(h);
   LoadBlock(S,s,LUAC_HEADERSIZE);
   
+#if !defined(COCOS_LUA)
   /* 如果文件头读取错误,则输出错误 */
   IF (memcmp(h,s,LUAC_HEADERSIZE)!=0, "bad header");
+#endif
+  
 }
 
 /* 加载预编译代码

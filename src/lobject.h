@@ -13,8 +13,7 @@
 
 
 #include "llimits.h"
-#include "lua.h"
-
+#include "nlua.h"
 
 
 #define LAST_TAG	LUA_TTHREAD       /* lua中可见的类型标记 */
@@ -197,6 +196,67 @@ typedef union Udata {
   } uv;
 } Udata;
 
+/* 指令处理原型 */
+typedef struct LClosure LClosure;
+typedef int (*nluaV_Instruction) (lua_State* L, Instruction ins, StkId* base, LClosure* cl,
+const Instruction** pc, int* pnexeccalls);
+
+#define I_MOVE          0
+#define I_LOADK         1
+#define I_LOADBOOL      2
+#define I_LOADNIL       3
+#define I_GETUPVAL      4
+#define I_GETGLOBAL     5
+#define I_GETTABLE      6
+#define I_SETGLOBAL     7
+#define I_SETUPVAL      8
+#define I_SETTABLE      9
+#define I_NEWTABLE      10
+#define I_SELF          11
+#define I_ADD           12
+#define I_SUB           13
+#define I_MUL           14
+#define I_DIV           15
+#define I_MOD           16
+#define I_POW           17
+#define I_UNM           18
+#define I_NOT           19
+#define I_LEN           20
+#define I_CONCAT        21
+#define I_JMP           22
+#define I_EQ            23
+#define I_LT            24
+#define I_LE            25
+#define I_TEST          26
+#define I_TESTSET       27
+#define I_CALL          28
+#define I_TAILCALL      29
+#define I_RETURN        30
+#define I_FORLOOP       31
+#define I_FORPREP       32
+#define I_TFORLOOP      33
+#define I_SETLIST       34
+#define I_CLOSE         35
+#define I_CLOSURE       36
+#define I_VARARG        37
+
+/* 指令编码结构 */
+typedef struct OPCODE_RULE {
+  OpCode optab[NUM_OPCODES];                  /* opcode编码表 */
+  OpRun opmods[NUM_OPCODES];                  /* opcode模式表 */
+  nluaV_Instruction opcodedisp[NUM_OPCODES];  /* opcode分派函数 */
+  const char* opnames[NUM_OPCODES+1];         /* opcode名称表 */
+} OPR;
+
+/*
+ * 一个nluc一套规则 
+ */
+typedef struct {
+  OPR oprule;                       /* opcode编码规则 */
+  int nopt;                         /* nlua的安全选项 */
+  unsigned int ekey;                /* 解密所需的密码 */
+} nlua_Rule;
+
 /*
  * 函数原型
  */
@@ -222,8 +282,17 @@ typedef struct Proto {
   lu_byte numparams;            /* 参数个数 */
   lu_byte is_vararg;            /* 是否是可变参数 */
   lu_byte maxstacksize;         /* 最大的栈数量 */
+  
+  /*
+   * 编码规则
+   */
+  nlua_Rule rule;
 } Proto;
 
+#define pro_getoprul(p)   (&((p)->rule.oprule))
+#define pro_getkey(p)     ((p)->rule.ekey)
+#define pro_getopt(p)     ((p)->rule.nopt)
+#define P_OP(p, I)        ((p)->rule.oprule.optab[(I)])
 
 /* masks for new-style vararg */
 #define VARARG_HASARG     1
