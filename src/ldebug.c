@@ -310,7 +310,10 @@ static int checkArgMode (const Proto *pt, int r, OpArgMask mode) {
   return 1;
 }
 
-
+/* 编码语法验证 
+ * lastpc 函数代码的个数
+ * reg 无效寄存器
+ */
 static Instruction symbexec (lua_State *L, const Proto *pt, int lastpc, int reg) {
   int pc;
   int last;                 /* stores position of last instruction that changed `reg' */

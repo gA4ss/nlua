@@ -243,12 +243,76 @@ struct Smain {
 };
 
 static int pmain(lua_State* L) {
+  long nopts;
+  unsigned char* nopt=NULL;
   struct Smain* s = (struct Smain*)lua_touserdata(L, 1);
   int argc=s->argc;
   char** argv=s->argv;
   const Proto* f;
   int i;
   if (!lua_checkstack(L,argc)) fatal("too many input files");
+  
+  /* 这里进行判断 */
+  /* 使用nlua格式 */
+  if (usenlua) {
+    nopts=sizeof(NagaLuaOpt);
+    if ((ef) || (ed)) {
+      if (efk)
+        nopts=sizeof(NagaLuaOpt)+strlen(fkeyp);
+      else
+        nopts=sizeof(NagaLuaOpt)+4;
+    }
+    nopt=(unsigned char*)malloc(nopts);
+    if (nopt==NULL) cannot("malloc");
+    memset(nopt, 0, nopts);
+    
+    /* 填充选项 */
+    if (rop) {
+      nlo_set_rop(nopt);
+    }
+    
+    if (eid) {
+      nlo_set_eid(nopt);
+    }
+    
+    if (ei) {
+      nlo_set_ei(nopt);
+    }
+    
+    if (ef || ed) {
+      
+      if (ef) {
+        nlo_set_ef(nopt);
+      }
+      
+      if (ed) {
+        nlo_set_ed(nopt);
+      }
+      
+      if (efk) {
+        /* 使用文件key */
+        nlo_set_efk(nopt);
+        memcpy(nopt+sizeof(NagaLuaOpt), fkeyp, fks);
+      } else {
+        memcpy(nopt+sizeof(NagaLuaOpt), &fkey, fks);
+      }
+      
+      /* 设置密码长度 */
+      nlo_set_ks(nopt,fks);
+    }/* end if */
+    
+    /* 将当前设置赋给当前的状态 */
+    {
+      unsigned int now_opt = ((NagaLuaOpt*)nopt)->opt;
+      nluaE_setopt(L, now_opt);
+      nluaE_setsign(L, 1, 1);
+    }
+    
+    /* 重新设定opcode编码表 */
+    if (rop) {
+      nluaV_oprinit(G(L));
+    }
+  }
   
   /* 可以一次加载多个lua文件 */
   for (i=0; i<argc; i++) {
@@ -270,55 +334,7 @@ static int pmain(lua_State* L) {
     
     if (usenlua==0) {       /* 使用正常的lua */
       luaU_dump(L,f,writer,D,stripping);
-    } else {                /* 使用nlua格式 */
-      unsigned char* nopt;
-      long nopts;
-      
-      nopts=sizeof(NagaLuaOpt);
-      if ((ef) || (ed)) {
-        if (efk)
-          nopts=sizeof(NagaLuaOpt)+strlen(fkeyp);
-        else
-          nopts=sizeof(NagaLuaOpt)+4;
-      }
-      nopt=(unsigned char*)malloc(nopts);
-      if (nopt==NULL) cannot("malloc");
-      memset(nopt, 0, nopts);
-      /* 填充选项 */
-      if (rop) {
-        nlo_set_rop(nopt);
-      }
-      
-      if (eid) {
-        nlo_set_eid(nopt);
-      }
-      
-      if (ei) {
-        nlo_set_ei(nopt);
-      }
-      
-      if (ef || ed) {
-        
-        if (ef) {
-          nlo_set_ef(nopt);
-        }
-        
-        if (ed) {
-          nlo_set_ed(nopt);
-        }
-        
-        if (efk) {
-          /* 使用文件key */
-          nlo_set_efk(nopt);
-          memcpy(nopt+sizeof(NagaLuaOpt), fkeyp, fks);
-        } else {
-          memcpy(nopt+sizeof(NagaLuaOpt), &fkey, fks);
-        }
-        
-        /* 设置密码长度 */
-        nlo_set_ks(nopt,fks);
-      }
-      
+    } else {
       nluaU_dump(L,f,writer,D,stripping,(NagaLuaOpt*)nopt, fkey);
     }
     lua_unlock(L);

@@ -155,15 +155,14 @@ void luaE_freethread (lua_State *L, lua_State *L1) {
 /* 初始化nlua */
 static void init_nlua(global_State *g) {
   
-  if (g->nboot) {
+  if (ns_get_booted(g->sign)) {
     return;
   }
-  g->nboot=1;
   
-  /* 文件类型初始化 */
-  g->is_nlua = 0;
+  ns_set_booted(g->sign);/* 表明已经启动 */
   g->nopt = 0;
   g->ekey = 0;
+  
   /* 设置指令前后函数 */
   g->istart = nluaV_insstart;
   g->iend = nluaV_insend;
@@ -273,15 +272,24 @@ LUA_API void lua_close (lua_State *L) {
 /*
  * nlua
  */
-
 LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt) {
   G(L)->nopt = opt;
 }
 
-LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua) {
-  G(L)->is_nlua = is_nlua;
-}
-
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key) {
   G(L)->ekey=key;
+}
+
+LUAI_FUNC void nluaE_setsign (lua_State *L, int compiler, int opted) {
+  if (compiler) {
+    ns_set_compiler(G(L)->sign);
+  }
+  
+  if (opted) {
+    ns_set_opted(G(L)->sign);
+  }
+}
+
+LUAI_FUNC int nluaE_getsign (lua_State *L) {
+  return G(L)->sign;
 }

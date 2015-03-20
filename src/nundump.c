@@ -243,13 +243,20 @@ static void LoadHeader(LoadState* S) {
  * 这里要判断是否进行了加密操作，是否拥有密码
  * 如果密码长度不为空则
  */
-static void LoadOptions(LoadState* S) {
+static void LoadOptions(LoadState* S, unsigned int *lopts) {
   NagaLuaOpt* nopt;
 
   nopt = &(S->opt);
   /* 读取一个选项 */
   LoadBlockForce(S,nopt,sizeof(NagaLuaOpt));
-  nluaE_setopt(S->L, nopt->opt);
+  
+  /* 如果此L是个处女则直接设置当前的opt为全局opt */
+  if (ns_get_opted(nluaE_getsign(S->L)) == 0) {
+    nluaE_setopt(S->L, nopt->opt);
+  }
+  
+  /* 保存局部选项 */
+  *lopts = nopt->opt;
   
   /* 解密NagaOpt密钥 */
   if (nopt->ks) {
@@ -297,16 +304,27 @@ static void LoadOptions(LoadState* S) {
   }/* end if */
   
   
-  /* 设置解密指令的密码 */
+  /* 设置解密指令的密码 
+   * 这个密码必须是唯一并且一致的
+   * 所有加载起来的nlua或者lua都要按照此来解密命令
+   */
   if (nlo_ei(nopt)) {
     nluaE_setkey(S->L, NLUA_DEF_KEY);
   }
 }
 
-static void LoadOpcodeTable(LoadState* S) {
+static void LoadOpcodeTable(LoadState* S, OpCode *t) {
   OpCode tab[NUM_OPCODES];
   LoadBlock(S,tab,sizeof(tab));
-  nluaV_oprread(G(S->L),tab);
+  
+  if (t) {
+    memcpy(t, tab, sizeof(OpCode)*NUM_OPCODES);
+  }
+  
+  /* 如果配置已经加载则这里不起作用 */
+  if (ns_get_opted(nluaE_getsign(S->L)) == 0) {
+    nluaV_oprread(G(S->L),tab);
+  }
 }
 
 /* 加载预编译代码
@@ -314,8 +332,10 @@ static void LoadOpcodeTable(LoadState* S) {
  * Z IO结构指针,用于读取要分析代码缓存
  * buff 用于scanner使用的缓存
  * name 这段代码的名称
+ * lnopt 本地naga选项
  */
-Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name) {
+Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name,
+                     unsigned int *opts, OpCode *tab) {
   LoadState S;
   
   /* 设置不同的程序名称 */
@@ -331,9 +351,9 @@ Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name) {
   
   /* 加载字节码文件头 */
   LoadHeader(&S);
-  LoadOptions(&S);
+  LoadOptions(&S, opts);
   /* 建立密码 */
-  LoadOpcodeTable(&S);
+  LoadOpcodeTable(&S, tab);
   return LoadFunction(&S,luaS_newliteral(L,"=?"));
 }
 
@@ -346,7 +366,11 @@ void nluaU_header (char* h) {
   *h++=(char)NLUAC_FORMAT;                /* 格式 */
   *h++=(char)*(char*)&x;                  /* 字节序 */
   *h++=(char)sizeof(int);                 /* 一个int的长度 */
+#if defined(COCOS_LUA)
+  *h++=(char)4;                           /* 一个size_t的长度 */
+#else
   *h++=(char)sizeof(size_t);              /* 一个size_t的长度 */
+#endif
   *h++=(char)sizeof(Instruction);         /* 一条指令的长度 */
   *h++=(char)sizeof(lua_Number);          /* lua数字类型的长度 */
   *h++=(char)(((lua_Number)0.5)==0);      /* is lua_Number integral? */

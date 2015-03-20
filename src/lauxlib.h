@@ -88,8 +88,16 @@ LUALIB_API const char *(luaL_gsub) (lua_State *L, const char *s, const char *p,
 LUALIB_API const char *(luaL_findtable) (lua_State *L, int idx,
                                          const char *fname, int szhint);
 
-
-
+/*
+ * nlua
+ */
+/* 设置nlua安全选项
+ * L 线程状态
+ * rop 开启随机opcode
+ * eid 加密指令数据
+ * ei 加密整条指令
+ */
+LUALIB_API int (nluaL_setopts) (lua_State *L, int rop, int eid, int ei);
 
 /*
 ** ===============================================================

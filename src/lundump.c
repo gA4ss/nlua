@@ -249,7 +249,11 @@ void luaU_header (char* h) {
   *h++=(char)LUAC_FORMAT;               /* 格式 */
   *h++=(char)*(char*)&x;                /* 字节序 */
   *h++=(char)sizeof(int);               /* 一个int的长度 */
+#if defined(COCOS_LUA)
+  *h++=(char)4;
+#else
   *h++=(char)sizeof(size_t);            /* 一个size_t的长度 */
+#endif
   *h++=(char)sizeof(Instruction);       /* 一条指令的长度 */
   *h++=(char)sizeof(lua_Number);        /* lua数字类型的长度 */
   *h++=(char)(((lua_Number)0.5)==0);		/* is lua_Number integral? */

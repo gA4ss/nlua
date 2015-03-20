@@ -130,10 +130,7 @@ typedef enum {iABC, iABx, iAsBx} OpMode;  /* basic instruction format */
 /* code a constant index as a RK value */
 #define RKASK(x)	((x) | BITRK)
 
-
-/*
-** invalid register that fits in 8 bits
-*/
+/* 无效寄存器标志 */
 #define NO_REG		MAXARG_A
 
 

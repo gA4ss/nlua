@@ -46,10 +46,18 @@ typedef struct naga_lua_options {
 #define nlo_set_ed(o)     (((NagaLuaOpt*)o)->opt |= 0x20)
 #define nlo_set_ks(o,k)   (((NagaLuaOpt*)o)->ks=(k))
 
+#define nlo_set_opt_rop(o)    ((o) |= 0x01)
+#define nlo_set_opt_eid(o)    ((o) |= 0x02)
+#define nlo_set_opt_ei(o)     ((o) |= 0x04)
+#define nlo_set_opt_ef(o)     ((o) |= 0x08)
+#define nlo_set_opt_efk(o)    ((o) |= 0x10)
+#define nlo_set_opt_ed(o)     ((o) |= 0x20)
+
 #define nlo_get_key(o)    ((unsigned char*)(o) + sizeof(NagaLuaOpt))
 
 /* load one chunk; from nundump.c */
-LUAI_FUNC Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name);
+LUAI_FUNC Proto* nluaU_undump (lua_State* L, ZIO* Z, Mbuffer* buff, const char* name,
+                               unsigned int *opts, OpCode *tab);
 
 /* make header; from nundump.c */
 LUAI_FUNC void nluaU_header (char* h);

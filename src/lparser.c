@@ -400,6 +400,7 @@ static void close_func (LexState *ls) {
   f->sizelocvars = fs->nlocvars;
   luaM_reallocvector(L, f->upvalues, f->sizeupvalues, f->nups, TString *);
   f->sizeupvalues = f->nups;
+  /* 当关闭一个函数时,会对它的代码进行验证 */
   lua_assert(luaG_checkcode(L, f));
   lua_assert(fs->bl == NULL);
   /* 恢复上一层函数 */

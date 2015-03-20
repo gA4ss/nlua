@@ -892,6 +892,7 @@ LUA_API int lua_load (lua_State *L, lua_Reader reader, void *data,
   int status;
   lua_lock(L);
   
+  
   /* 如果代码没有名称则是问号 */
   if (!chunkname) chunkname = "?";
   /* 关联IO结构 */

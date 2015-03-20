@@ -71,7 +71,7 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "-1 -2 -3 -o /Users/devilogic/workspace/test.dump /Users/devilogic/workspace/test.lua"
+            argument = "-1 -2 -3 -4 -5 -k 123 -o /Users/devilogic/workspace/test.luc /Users/devilogic/workspace/test.lua"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
@@ -87,11 +87,11 @@
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/devilogic/workspace/test.dump"
+            argument = "/Users/devilogic/workspace/test.luc"
             isEnabled = "NO">
          </CommandLineArgument>
          <CommandLineArgument
-            argument = "/Users/devilogic/Naga/nlua/test/testpb.lua"
+            argument = "/Users/devilogic/workspace/test.lua"
             isEnabled = "YES">
          </CommandLineArgument>
          <CommandLineArgument

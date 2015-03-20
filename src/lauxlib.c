@@ -665,3 +665,33 @@ LUALIB_API lua_State *luaL_newstate (void) {
   return L;
 }
 
+/*************************
+ * nlua
+ *************************/
+#include "nundump.h"
+LUALIB_API int nluaL_setopts (lua_State *L, int rop, int eid, int ei) {
+  global_State *g = G(L);
+  
+  /* 设置过了就不用再设置了 */
+  if (ns_get_opted(nluaE_getsign(L)) == 0) {
+    return 0;
+  }
+  
+  nluaE_setsign(L, 0, 1);
+  
+  /* 填充选项 */
+  if (rop) {
+    nlo_set_opt_rop(g->nopt);
+  }
+  
+  if (eid) {
+    nlo_set_opt_eid(g->nopt);
+  }
+  
+  if (ei) {
+    nlo_set_opt_ei(g->nopt);
+  }
+
+  return 0;
+}
+

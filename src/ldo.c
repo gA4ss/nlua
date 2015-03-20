@@ -491,40 +491,49 @@ struct SParser {    /* `f_parser'函数的参数结构 */
 };
 
 /* 根据当前编码表，转换代码 */
-static Instruction rebopc(lua_State* L, Instruction ins) {
-  OpCode o;
-  OPR* opr = R(L);
-  o=GET_OPCODE(ins);
-  /* opcode重新映射 */
-  o=opr->optab[o];
-  SET_OPCODE(ins, o);
-  return ins;
-}
+//static Instruction rebopc(lua_State* L, Instruction ins) {
+//  OpCode o;
+//  OPR* opr = R(L);
+//  o=GET_OPCODE(ins);
+//  /* opcode重新映射 */
+//  o=opr->optab[o];
+//  SET_OPCODE(ins, o);
+//  return ins;
+//}
 
 /* 语法分析入口 */
 static void f_parser (lua_State *L, void *ud) {
-  int i;
-  Proto *tf;
+  int i,j,is_nlua;
+  OpCode ltab[NUM_OPCODES];
+  Proto *tf, *sp;
   Closure *cl;
   struct SParser *p = cast(struct SParser *, ud);
+  unsigned int lopts = 0;
   
   /* 检查第一个字节 */
   int c = luaZ_lookahead(p->z);
   luaC_checkGC(L);
   
-  /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型 
+  /* 这里判断是否是文件标志头,并执行,随后返回一个函数原型
    * 这里主要是判读是脚本文件还是预先编译文件
    */
   if (c == LUA_SIGNATURE[0]) {          /* lua字节码 */
-    nluaE_setnlua(L,0);
+    is_nlua=0;
     tf = luaU_undump(L, p->z, &p->buff, p->name);
   } else if (c == NLUA_SIGNATURE[0]) {  /* nlua字节码 */
-    nluaE_setnlua(L,1);
-    tf = nluaU_undump(L, p->z, &p->buff, p->name);
+    is_nlua=1;
+    tf = nluaU_undump(L, p->z, &p->buff, p->name, &lopts, ltab);
   } else {                              /* lua脚本 */
-    nluaE_setnlua(L,0);
+    is_nlua=0;
     tf = luaY_parser(L, p->z, &p->buff, p->name);
   }
+  
+  /* 一旦加载一个文件，那么当前的这个lua环境就按照此文件的配置来执行
+   * 所以这里默认就暴力的直接设置标志了
+   *
+   * 如果是lua脚本或者luc则使用无安全配置规则
+   */
+  nluaE_setsign(L, 0, 1);
   
   /*
   tf = ((c == LUA_SIGNATURE[0]) ? luaU_undump : luaY_parser)(L, p->z,
@@ -537,28 +546,156 @@ static void f_parser (lua_State *L, void *ud) {
   for (i = 0; i < tf->nups; i++)  /* 为upvalue分配空间 */
     cl->l.upvals[i] = luaF_newupval(L);
   
+  /* 这里统一打印 */
+#if defined(DEBUG)
+  printf("procedure name = %s\n", p->name);
+  for (i=0; i<tf->sizecode; i++) printf("%x\n",tf->code[i]);
+  
+  /* 如果存在子函数则打印子函数 */
+  if (tf->sizep) {
+    for (i=0; i<tf->sizep; i++) {
+      printf("sub procedure<%d>:\n", i);
+      sp = tf->p[i];
+      for (j=0; j<sp->sizecode; j++) printf("%x\n",sp->code[j]);
+    }
+  }
+  
+#endif
+  
   /* 这里进行统一的转码 
    * 如果未开启nlua模式
    * 这里就是做nlua于正常模式的兼容
+   *
+   * <编译器相关>
+   * 如果是在编译器中则不用做这些
+   * 只有纯lua脚本才会涉及到编译器
    */
-  if (G(L)->is_nlua == 0) {
+  if ((is_nlua == 0) &&
+      (ns_get_compiler(nluaE_getsign(L)) == 0)) {
     int i;
     
-    /* 需要转码 */
-    if (nlo_opt_rop(G(L)->nopt)) {
-      for (i=0; i<tf->sizecode; i++) tf->code[i] = rebopc(L, tf->code[i]);
-    }
+    /* 如果直接是脚本则不需要转码
+     * 因为在第一个随机化字节码后，nopcode.c中的
+     * 编码opcode已经发生了改变，所以在编译字节代码
+     * 时
+     */
     
     /* 加密指令数据 */
     if (nlo_opt_eid(G(L)->nopt)) {
       for (i=0; i<tf->sizecode; i++) G(L)->ienidata(L,&(tf->code[i]));
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          for (j=0; j<sp->sizecode; j++) G(L)->ienidata(L,&(sp->code[j]));
+        }
+      }
+      
+#if defined(DEBUG)
+      printf("-------------------------\n");
+      printf("after eid:\n");
+      for (i=0; i<tf->sizecode; i++) printf("%x\n",tf->code[i]);
+      
+      /* 如果存在子函数则打印子函数 */
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          printf("sub procedure<%d>:\n", i);
+          sp = tf->p[i];
+          for (j=0; j<sp->sizecode; j++) printf("%x\n",sp->code[j]);
+        }
+      }
+#endif
     }
     
     /* 加密指令 */
     if (nlo_opt_ei(G(L)->nopt)) {
-        nluaV_enproc(L,tf);
+      nluaV_enproc(L,tf);
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          nluaV_enproc(L,sp);
+        }
+      }
+#if defined(DEBUG)
+      printf("-------------------------\n");
+      printf("after ei:\n");
+      for (i=0; i<tf->sizecode; i++) printf("%x\n",tf->code[i]);
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          printf("sub procedure<%d>:\n", i);
+          sp = tf->p[i];
+          for (j=0; j<sp->sizecode; j++) printf("%x\n",sp->code[j]);
+        }
+      }
+#endif
     }
-  }/* end if */
+  } else if (is_nlua != 0) {
+    /* nlua字节代码 
+     * [前期] 按照本地配置进行解密
+     * [中期] 按照当前编码表进行重新转码
+     * [后期] 按照全局配置进行加密
+     */
+    
+    /* [前期] */
+    if (nlo_opt_ei(lopts)) {
+      nluaV_deproc(L,tf);
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          nluaV_deproc(L,sp);
+        }
+      }
+    }/* end 解密指令 */
+    
+    if (nlo_opt_eid(lopts)) {
+      for (i=0; i<tf->sizecode; i++) G(L)->ideidata(L,&(tf->code[i]));
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          for (j=0; j<sp->sizecode; j++) G(L)->ideidata(L,&(sp->code[j]));
+        }
+      }
+    }/* end 解密指令数据 */
+    
+    
+    /* [中期]
+     * 无论是否启用随机opcode，都用当前的表进行重新编码
+     */
+    for (i=0; i<tf->sizecode; i++) tf->code[i] = nluaV_remap_onnow(G(L),tf->code[i],ltab);
+    if (tf->sizep) {
+      for (i=0; i<tf->sizep; i++) {
+        sp = tf->p[i];
+        for (j=0; j<sp->sizecode; j++) sp->code[i] = nluaV_remap_onnow(G(L),sp->code[i],ltab);
+      }
+    }/* end 重新转码 */
+    
+    /* [后期] */
+    if (nlo_opt_eid(G(L)->nopt)) {
+      for (i=0; i<tf->sizecode; i++) G(L)->ienidata(L,&(tf->code[i]));
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          for (j=0; j<sp->sizecode; j++) G(L)->ienidata(L,&(sp->code[j]));
+        }
+      }
+    }/* end 加密指令数据 */
+    
+    
+    if (nlo_opt_ei(G(L)->nopt)) {
+      nluaV_enproc(L,tf);
+      if (tf->sizep) {
+        for (i=0; i<tf->sizep; i++) {
+          sp = tf->p[i];
+          nluaV_enproc(L,sp);
+        }
+      }
+    } /* end 加密指令 */
+    else {
+      /* 在编译器中进行编译 
+       * 这里没啥好做的
+       */
+    }
+    
+  }/* end else */
   
   /* 设置这个闭包指针到栈顶，为执行做好准备 */
   setclvalue(L, L->top, cl);

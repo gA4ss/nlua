@@ -85,6 +85,19 @@ typedef struct OPCODE_RULE {
   const char* opnames[NUM_OPCODES+1];         /* opcode名称表 */
 } OPR;
 
+
+#define NLUA_SIGN_BOOTED          0x01
+#define NLUA_SIGN_COMPILER        0x02
+#define NLUA_SIGN_OPTED           0x04
+
+#define ns_set_booted(s)          ((s) |= NLUA_SIGN_BOOTED)
+#define ns_set_compiler(s)        ((s) |= NLUA_SIGN_COMPILER)
+#define ns_set_opted(s)           ((s) |= NLUA_SIGN_OPTED)
+
+#define ns_get_booted(s)          ((s) & NLUA_SIGN_BOOTED)
+#define ns_get_compiler(s)        ((s) & NLUA_SIGN_COMPILER)
+#define ns_get_opted(s)           ((s) & NLUA_SIGN_OPTED)
+
 #define MAX_KEY_PATH              128
 /* `全局状态`,所有的线程共享这个状态 */
 typedef struct global_State {
@@ -116,8 +129,7 @@ typedef struct global_State {
   
   /* nlua
    */
-  int nboot;                        /* 标记已经启动 */
-  int is_nlua;                      /* 是nlua的文件格式 */
+  int sign;                         /* 全局标记 */
   OPR oprule;                       /* opcode编码规则 */
   unsigned int nopt;                /* nlua的安全选项 */
   unsigned int ekey;                /* 解密所需的密码 */
@@ -140,7 +152,7 @@ typedef struct global_State {
 /* 独立线程状态，每条线程私有*/
 struct lua_State {
   CommonHeader;
-  lu_byte status;
+  lu_byte status;                     /* 当前执行的状态 */
   StkId top;                          /* 栈顶，在栈上第一个空闲的位置 */
   StkId base;                         /* 当前函数的栈基 */
   global_State *l_G;                  /* 全局状态 */
@@ -150,7 +162,7 @@ struct lua_State {
   StkId stack;                        /* 栈的起始 */
   CallInfo *end_ci;                   /* 指向CallInfo队列的末尾指针 */
   CallInfo *base_ci;                  /* CallInfo队列 */
-  int stacksize;
+  int stacksize;                      /* 栈大小 */
   int size_ci;                        /* `base_ci'队列的长度 */
   unsigned short nCcalls;             /* C调用次数 */
   unsigned short baseCcalls;          /* nested C calls when resuming coroutine */
@@ -170,8 +182,7 @@ struct lua_State {
 /* 从本地线程状态返回全局状态 */
 #define G(L)	(L->l_G)
 
-/* 所有可回收内存对象的联合体
- */
+/* 所有可回收内存对象的联合体 */
 union GCObject {
   GCheader gch;
   union TString ts;
@@ -207,8 +218,9 @@ LUAI_FUNC void luaE_freethread (lua_State *L, lua_State *L1);
  * nlua
  */
 LUAI_FUNC void nluaE_setopt (lua_State *L, unsigned int opt);
-LUAI_FUNC void nluaE_setnlua (lua_State *L, int is_nlua);
 LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key);
+LUAI_FUNC void nluaE_setsign (lua_State *L, int compiler, int opted);
+LUAI_FUNC int nluaE_getsign (lua_State *L);
 
 #endif
 

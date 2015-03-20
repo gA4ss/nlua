@@ -233,6 +233,39 @@ void nluaV_oprwrite(global_State* g, OpCode* tab) {
   memcpy(tab, g->oprule.optab, sizeof(g->oprule.optab));//sizeof(OpCode)*NUM_OPCODES
 }
 
+/* 指令opcode转换
+ * 将一条指令经过随机话的指令按照另外一张表重现编码
+ */
+Instruction nluaV_remap(global_State* g, Instruction ins, OpCode *tabf, OpCode *tabt) {
+  OpCode o, z;
+  int i;
+  /* 取出指令的opcode */
+  o = GET_OPCODE(ins);
+  /* 通过它的编码表找回原始的值 */
+  for (i=0; i<NUM_OPCODES; i++) {
+    if (o == tabf[i]) {
+      z=(OpCode)i;
+      break;
+    }
+  }
+  /* 重新进行编码 
+   * FIXME: 如果上边找不到则会出现错误
+   */
+  o = tabt[z];
+  SET_OPCODE(ins, o);
+  
+  return ins;
+}
+
+/* 指令opcode转换
+ * 将一条指令经过随机话的指令按照当前编码表
+ */
+Instruction nluaV_remap_onnow(global_State* g, Instruction ins, OpCode *tabf) {
+  OpCode *tabt;
+  tabt = &(g->oprule.optab[0]);
+  return nluaV_remap(g, ins, tabf, tabt);
+}
+
 /* 指令开始执行前作的动作
  * L 虚拟机状态指针
  * pins 当前要执行指令的指针
@@ -260,8 +293,6 @@ int nluaV_insend(lua_State *L, Instruction* pins) {
   
   UNUSED(g);
   UNUSED(opt);
-  if (g->is_nlua) {
-  }
   return 0;
 }
 
@@ -397,3 +428,4 @@ int nluaV_enproc(lua_State* L, const Proto* f) {
   
   return f->sizecode;
 }
+
