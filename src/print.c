@@ -19,7 +19,7 @@
 #include "nopcodes.h"
 #include "nundump.h"
 
-#define PrintFunction	luaU_print
+#define PrintFunction	nluaU_print
 
 #define Sizeof(x)	((int)sizeof(x))
 #define VOID(p)		((const void*)(p))

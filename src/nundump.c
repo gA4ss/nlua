@@ -15,6 +15,7 @@
 #include "lstring.h"
 #include "nundump.h"
 #include "lzio.h"
+#include "nheader.h"
 
 /* 字节码读取结构 */
 typedef struct {

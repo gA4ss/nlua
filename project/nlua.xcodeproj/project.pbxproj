@@ -40,6 +40,7 @@
 		BC4CBDA71A944B5600C50272 /* lzio.c in Sources */ = {isa = PBXBuildFile; fileRef = BC4CBD851A944B5600C50272 /* lzio.c */; };
 		BC4CBDA81A944B5600C50272 /* Makefile in Sources */ = {isa = PBXBuildFile; fileRef = BC4CBD871A944B5600C50272 /* Makefile */; };
 		BC4CBDA91A944B5600C50272 /* print.c in Sources */ = {isa = PBXBuildFile; fileRef = BC4CBD881A944B5600C50272 /* print.c */; };
+		BC5B4B6A1ABDDEBD004AE708 /* nheader.c in Sources */ = {isa = PBXBuildFile; fileRef = BC5B4B691ABDDEBD004AE708 /* nheader.c */; };
 		BC78D55E1A9F28600024E3A2 /* nlua.c in Sources */ = {isa = PBXBuildFile; fileRef = BC78D55D1A9F28600024E3A2 /* nlua.c */; };
 		BCADED051A9A1DB400356922 /* ndump.c in Sources */ = {isa = PBXBuildFile; fileRef = BCADED021A9A1DB400356922 /* ndump.c */; };
 		BCADED061A9A1DB400356922 /* nundump.c in Sources */ = {isa = PBXBuildFile; fileRef = BCADED031A9A1DB400356922 /* nundump.c */; };
@@ -121,6 +122,8 @@
 		BC4CBD861A944B5600C50272 /* lzio.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lzio.h; path = ../../src/lzio.h; sourceTree = "<group>"; };
 		BC4CBD871A944B5600C50272 /* Makefile */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.make; name = Makefile; path = ../../src/Makefile; sourceTree = "<group>"; tabWidth = 2; };
 		BC4CBD881A944B5600C50272 /* print.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = print.c; path = ../../src/print.c; sourceTree = "<group>"; tabWidth = 2; };
+		BC5B4B681ABDDD99004AE708 /* nheader.h */ = {isa = PBXFileReference; indentWidth = 2; lastKnownFileType = sourcecode.c.h; name = nheader.h; path = ../../src/nheader.h; sourceTree = "<group>"; tabWidth = 2; };
+		BC5B4B691ABDDEBD004AE708 /* nheader.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = nheader.c; path = ../../src/nheader.c; sourceTree = "<group>"; tabWidth = 2; };
 		BC78D55D1A9F28600024E3A2 /* nlua.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; lineEnding = 2; name = nlua.c; path = ../../src/nlua.c; sourceTree = "<group>"; tabWidth = 2; };
 		BCADED021A9A1DB400356922 /* ndump.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; name = ndump.c; path = ../../src/ndump.c; sourceTree = "<group>"; tabWidth = 2; };
 		BCADED031A9A1DB400356922 /* nundump.c */ = {isa = PBXFileReference; fileEncoding = 4; indentWidth = 2; lastKnownFileType = sourcecode.c.c; lineEnding = 2; name = nundump.c; path = ../../src/nundump.c; sourceTree = "<group>"; tabWidth = 2; };
@@ -163,6 +166,8 @@
 				BC4CBD811A944B5600C50272 /* lundump.c */,
 				BC4CBD821A944B5600C50272 /* lundump.h */,
 				BC4CBD5D1A944B5600C50272 /* ldump.c */,
+				BC5B4B681ABDDD99004AE708 /* nheader.h */,
+				BC5B4B691ABDDEBD004AE708 /* nheader.c */,
 			);
 			name = dump;
 			sourceTree = "<group>";
@@ -343,6 +348,7 @@
 				BC4CBD8F1A944B5600C50272 /* ldo.c in Sources */,
 				BC4CBD9D1A944B5600C50272 /* lstate.c in Sources */,
 				BC4CBD9A1A944B5600C50272 /* lopcodes.c in Sources */,
+				BC5B4B6A1ABDDEBD004AE708 /* nheader.c in Sources */,
 				BCADED6E1A9ADADF00356922 /* crc.c in Sources */,
 				BCADED051A9A1DB400356922 /* ndump.c in Sources */,
 				BC4CBD8A1A944B5600C50272 /* lauxlib.c in Sources */,

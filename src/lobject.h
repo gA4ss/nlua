@@ -53,7 +53,6 @@ typedef struct lua_TValue {
   TValuefields;
 } TValue;
 
-
 /*
  * 测试对象的宏
  */

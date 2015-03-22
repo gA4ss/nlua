@@ -20,6 +20,7 @@
 #include "lundump.h"
 #include "lzio.h"
 #include "lopcodes.h"
+#include "nheader.h"
 
 /* 字节码读取结构 */
 typedef struct {

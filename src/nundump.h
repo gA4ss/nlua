@@ -5,6 +5,7 @@
 #include "lzio.h"
 #include "crc.h"
 #include "xor.h"
+#include "nheader.h"
 
 /* Naga Lua操作选项 */
 typedef struct naga_lua_options {
@@ -71,16 +72,7 @@ LUAI_FUNC int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
 
 #ifdef nluac_c
 /* print one chunk; from print.c */
-LUAI_FUNC void luaU_print (lua_State* L, const Proto* f, int full);
+LUAI_FUNC void nluaU_print (lua_State* L, const Proto* f, int full);
 #endif
-
-/* for header of binary files -- this is Naga Lua 1.0 */
-#define NLUAC_VERSION           0x10
-
-/* for header of binary files -- this is the official format */
-#define NLUAC_FORMAT            0
-
-/* size of header of binary files */
-#define NLUAC_HEADERSIZE		12
 
 #endif

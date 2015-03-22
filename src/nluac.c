@@ -328,7 +328,7 @@ static int pmain(lua_State* L) {
   f=combine(L,argc);
   
   /* 反汇编 */
-  if (listing) luaU_print(L, f,listing>1);
+  if (listing) nluaU_print(L, f,listing>1);
   
   /* 输出为字节代码文件 */
   if (dumping) {

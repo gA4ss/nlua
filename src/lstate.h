@@ -214,7 +214,7 @@ LUAI_FUNC void nluaE_setkey (lua_State *L, unsigned int key);
 LUAI_FUNC unsigned int nluaE_getkey (lua_State *L);
 LUAI_FUNC void nluaE_setcs (lua_State *L);
 LUAI_FUNC int nluaE_getcs (lua_State *L);
-LUAI_FUNC OPR *nluaE_getopr (lua_State *L);
+LUAI_FUNC OPR *nluaE_getopr (lua_State *L);/* 暂时没有使用，也许有bug */
 
 #endif
 

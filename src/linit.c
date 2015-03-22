@@ -13,7 +13,7 @@
 #include "lualib.h"
 #include "lauxlib.h"
 
-
+/* 基本库 */
 static const luaL_Reg lualibs[] = {
   {"", luaopen_base},
   {LUA_LOADLIBNAME, luaopen_package},
@@ -26,9 +26,10 @@ static const luaL_Reg lualibs[] = {
   {NULL, NULL}
 };
 
-
 LUALIB_API void luaL_openlibs (lua_State *L) {
   const luaL_Reg *lib = lualibs;
+  
+  /* 遍历所有库 */
   for (; lib->func; lib++) {
     lua_pushcfunction(L, lib->func);
     lua_pushstring(L, lib->name);
