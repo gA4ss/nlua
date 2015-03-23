@@ -31,7 +31,7 @@ LIB_O=	lauxlib.o lbaselib.o ldblib.o liolib.o lmathlib.o loslib.o ltablib.o \
 	lstrlib.o loadlib.o linit.o
 
 # nlua
-CORE_O+=  ndump.o nundump.o crc.o xor.o nopcodes.o nlua.o
+CORE_O+=  ndump.o nundump.o crc.o xor.o nopcodes.o nheader.o nlua.o
 
 LUA_T=	lua
 LUA_O=	lua.o
@@ -197,6 +197,7 @@ nopcodes.o: nopcodes.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
 nlua.o: nlua.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
   llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h nundump.h \
   nlua.h nopcodes.h lopcodes.h nversion.h nglobal.h
+nheader.o: nheader.h nheader.c
 crc.o: crc.c crc.h
 xor.o: xor.c xor.h
 

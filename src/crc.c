@@ -37,7 +37,7 @@ unsigned int crc_32_tab[]= {
 	0xb3667a2e, 0xc4614ab8, 0x5d681b02, 0x2a6f2b94, 0xb40bbe37, 0xc30c8ea1, 0x5a05df1b, 0x2d02ef8d
 };
 
-unsigned int crc32(unsigned char *data, unsigned int length) {
+unsigned int naga_crc32(unsigned char *data, unsigned int length) {
 	unsigned int CRC = 0xffffffff;
 
 	while (length--)
@@ -46,7 +46,7 @@ unsigned int crc32(unsigned char *data, unsigned int length) {
 	return CRC ^ 0xFFFFFFFF;
 }
 
-unsigned int crc32int(unsigned int *data) {
+unsigned int naga_crc32int(unsigned int *data) {
 	unsigned int *d = data;
 	unsigned int CRC = 0xFFFFFFFF;
 
@@ -63,7 +63,7 @@ unsigned int crc32int(unsigned int *data) {
 //#define __CRC_SELFTEST__ 0xca87914d
 //#endif
 
-unsigned char crc32_selftests() {
+unsigned char naga_crc32_selftests() {
 	unsigned int i;
 	unsigned int crc  = 0xFFFFFFFF;
 	unsigned char bSuccess = 0;
@@ -73,14 +73,14 @@ unsigned char crc32_selftests() {
 
 	bSuccess = __CRC_SELFTEST__ == (crc ^ 0xFFFFFFFF);
 
-	bSuccess &= crc32((unsigned char*)crc_32_tab, sizeof crc_32_tab) == __CRC_SELFTEST__;
+	bSuccess &= naga_crc32((unsigned char*)crc_32_tab, sizeof crc_32_tab) == __CRC_SELFTEST__;
 
 	return bSuccess;
 }
 
 #else // CRC_NOT_TABLE
 
-unsigned int crc32(unsigned char* data, unsigned int length) {
+unsigned int naga_crc32(unsigned char* data, unsigned int length) {
 	unsigned int r = 0xFFFFFFFFUL;
 	unsigned int i, b;
 
@@ -97,14 +97,14 @@ unsigned int crc32(unsigned char* data, unsigned int length) {
 	return r ^ 0xFFFFFFFFUL;
 }
 
-unsigned char crc32_selftests() {
+unsigned char naga_crc32_selftests() {
 	unsigned char testData[32];
 	unsigned char i;
 
 	for (i = 0; i < sizeof (testData); ++i)
 		testData[i] = i;
 
-	return crc32(testData, sizeof (testData)) == 0x91267E8AUL;
+	return naga_crc32(testData, sizeof (testData)) == 0x91267E8AUL;
 }
 
 #endif

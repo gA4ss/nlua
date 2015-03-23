@@ -413,7 +413,7 @@ static Instruction deins(lua_State *L, Instruction ins,
       key = p->rule.ekey;
     } else {
       Instruction pins = *(pc-1);
-      key = crc32((unsigned char*)&pins, sizeof(Instruction));
+      key = naga_crc32((unsigned char*)&pins, sizeof(Instruction));
     }
     ideins(L, &ins, key);
   }

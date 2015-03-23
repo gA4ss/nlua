@@ -96,7 +96,7 @@ static void PrintCode(lua_State* L, const Proto* f) {
       if (pc==0) {
         key=f->rule.ekey;
       } else {
-        key=crc32((unsigned char*)&code[pc-1], sizeof(Instruction));
+        key=naga_crc32((unsigned char*)&code[pc-1], sizeof(Instruction));
       }
       deins(L, &i, key);
     }

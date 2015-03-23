@@ -265,7 +265,7 @@ static void LoadOptions(LoadState* S) {
     unsigned int k, ksize;
     
     nluaU_header(h);
-    k=crc32((unsigned char*)&h, NLUAC_HEADERSIZE);
+    k=naga_crc32((unsigned char*)&h, NLUAC_HEADERSIZE);
     
     /* 获取密码长度 */
     ksize = nopt->ks;
@@ -297,7 +297,7 @@ static void LoadOptions(LoadState* S) {
     
     /* 获取加密数据key */
     if (nlo_ed(nopt)) {
-      S->dkey=crc32((unsigned char*)&k, 4);
+      S->dkey=naga_crc32((unsigned char*)&k, 4);
     }
     
     free(realk);

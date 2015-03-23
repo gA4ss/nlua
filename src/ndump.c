@@ -225,7 +225,7 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
   D.opt=nopt;
   D.key=ekey;
   if (nlo_ed(nopt) || (nlo_ei(nopt))) {
-    D.dkey=crc32((unsigned char*)&ekey, 4);
+    D.dkey=naga_crc32((unsigned char*)&ekey, 4);
   } else {
     D.dkey=ekey;
   }
@@ -236,7 +236,7 @@ int nluaU_dump (lua_State* L, const Proto* f, lua_Writer w,
     unsigned char* ks;
     unsigned int k;
     nluaU_header(h);
-    k=crc32((unsigned char*)&h, NLUAC_HEADERSIZE);
+    k=naga_crc32((unsigned char*)&h, NLUAC_HEADERSIZE);
     ks=nlo_get_key(nopt);
     XorArray(k, ks, ks, nlo_ks(nopt));
   }

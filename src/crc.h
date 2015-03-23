@@ -9,9 +9,9 @@ extern "C"
 #define UPDC32(octet, crc)\
   (unsigned int)((crc_32_tab[(((unsigned int)(crc)) ^ ((unsigned char)(octet))) & 0xff] ^ (((unsigned int)(crc)) >> 8)))
 
-unsigned int crc32(unsigned char* data, unsigned int length);
-unsigned int crc32int(unsigned int *data);
-unsigned char crc32_selftests ();
+unsigned int naga_crc32(unsigned char* data, unsigned int length);
+unsigned int naga_crc32int(unsigned int *data);
+unsigned char naga_crc32_selftests ();
 	
 extern unsigned int crc_32_tab[];
 	

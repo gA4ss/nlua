@@ -297,9 +297,9 @@ int nluaV_insstart(lua_State* L, Instruction* pins) {
 int nluaV_insend(lua_State *L, Instruction* pins) {
   Proto *p;
   int opt;
-  lua_assert(isLua(L->ci));       /* 必须是lua函数 */
-  p = clvalue(L->ci->func)->l.p;
-  opt = p->rule.nopt;
+  //lua_assert(isLua(L->ci));       /* 必须是lua函数 */
+  //p = clvalue(L->ci->func)->l.p;
+  //opt = p->rule.nopt;
   
   UNUSED(p);
   UNUSED(opt);
@@ -377,7 +377,7 @@ lu_int32 nluaV_fkmake(lua_State* L, const char* path) {
     return 0;
   }
   
-  fkey=(unsigned int)crc32((unsigned char*)fbuf, (unsigned int)fsize);
+  fkey=(unsigned int)naga_crc32((unsigned char*)fbuf, (unsigned int)fsize);
   free(fbuf);
   fclose(fp);
   
@@ -416,7 +416,7 @@ int nluaV_enproc(lua_State* L, const Proto* f) {
   int i;
   
   /* 计算这个key，可以关联其他保密数据 */
-  //unsigned int key = crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
+  //unsigned int key = naga_crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
   unsigned int key = f->rule.ekey;
   /* 加密第一条代码 */
   G(L)->ienins(L,&(f->code[0]), key);
@@ -424,7 +424,7 @@ int nluaV_enproc(lua_State* L, const Proto* f) {
   /* 加密其余指令 */
   for (i=1; i<f->sizecode; i++) {
     /* 使用其他指令的密文hash作为key */
-    key = crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
+    key = naga_crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
     G(L)->ienins(L,&(f->code[i]), key);
   }
   
@@ -435,7 +435,7 @@ LUAI_FUNC int nluaV_deproc(lua_State* L, const Proto* f) {
   int i;
   
   /* 计算这个key，可以关联其他保密数据 */
-  //unsigned int key = crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
+  //unsigned int key = naga_crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
   unsigned int key = f->rule.ekey;
   /* 加密第一条代码 */
   G(L)->ideins(L,&(f->code[0]), key);
@@ -443,7 +443,7 @@ LUAI_FUNC int nluaV_deproc(lua_State* L, const Proto* f) {
   /* 加密其余指令 */
   for (i=1; i<f->sizecode; i++) {
     /* 使用其他指令的密文hash作为key */
-    key = crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
+    key = naga_crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
     G(L)->ideins(L,&(f->code[i]), key);
   }
   

@@ -143,7 +143,7 @@ static int doargs(lua_State* L, int argc, char* argv[]) {
       
       /* 计算密码长度 */
       if (efk==0) {
-        fkey=crc32((unsigned char*)kstr, (unsigned int)strlen(kstr));
+        fkey=naga_crc32((unsigned char*)kstr, (unsigned int)strlen(kstr));
         fks=4;
         /* 纪录下,为了-x参数在-k参数之后的情况做准备 */
         strcpy(fkeyp, kstr);
