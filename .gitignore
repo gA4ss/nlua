@@ -49,6 +49,7 @@ xlinker
 *.org
 try make/
 test/
+project/
 bak/
 *.0*
 *.out
