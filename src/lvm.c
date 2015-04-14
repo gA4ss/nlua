@@ -409,13 +409,15 @@ static Instruction deins(lua_State *L, Instruction ins,
     /* 如果是当前函数的第一条指令
      * 判断地址是否相等
      */
-    if (&(cl->p->code[0]) == pc) {
-      key = p->rule.ekey;
-    } else {
-      Instruction pins = *(pc-1);
-      key = naga_crc32((unsigned char*)&pins, sizeof(Instruction));
-    }
-    ideins(L, &ins, key);
+//    if (&(cl->p->code[0]) == pc) {
+//      key = p->rule.ekey;
+//    } else {
+//      Instruction pins = *(pc-1);
+//      key = naga_crc32((unsigned char*)&pins, sizeof(Instruction));
+//    }
+//    ideins(L, &ins, key);
+    
+    ideins(L, &ins, 0);
   }
   
   return ins;

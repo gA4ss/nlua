@@ -26,6 +26,7 @@ unsigned int PolyXorKey(unsigned int dwKey) {
 }
 
 void XorArray(unsigned int dwKey, unsigned char* pPoint, unsigned char* pOut, unsigned int iLength) {
+#if 0
 	unsigned int dwNextKey = dwKey;
 	unsigned char* pKey = (unsigned char*)&dwNextKey;
 	unsigned int i = 0, j = 0;
@@ -36,6 +37,23 @@ void XorArray(unsigned int dwKey, unsigned char* pPoint, unsigned char* pOut, un
 			j = 0;
 		} else j++;
 	}
+#endif
+  
+  unsigned int i = 0;
+  unsigned int key = 0x99999999;
+  unsigned int count = iLength / 4;
+  unsigned int recount = 0;
+  unsigned int *pIntOut = (unsigned int *)pOut;
+  unsigned int *pIntPoint = (unsigned int *)pPoint;
+  
+  for (i = 0; i < count; i++) {
+    pIntOut[i] = pIntPoint[i] ^ key;
+  }
+
+  recount = iLength % 4;
+  for (i = 0; i < recount; i++) {
+    pOut[i + count * 4] = pPoint[i + count * 4] ^ 0x99;
+  }
 }
 
 void XorCoder(unsigned char* pKey, unsigned char* pBuffer, unsigned int iLength) {

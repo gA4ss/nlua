@@ -415,6 +415,7 @@ int nluaV_deidata (lua_State* L, Instruction* pins) {
 int nluaV_enproc(lua_State* L, const Proto* f) {
   int i;
   
+#if 0
   /* 计算这个key，可以关联其他保密数据 */
   //unsigned int key = naga_crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
   unsigned int key = f->rule.ekey;
@@ -427,6 +428,11 @@ int nluaV_enproc(lua_State* L, const Proto* f) {
     key = naga_crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
     G(L)->ienins(L,&(f->code[i]), key);
   }
+#endif
+  
+  for (i=0; i<f->sizecode; i++) {
+    G(L)->ienins(L,&(f->code[i]), 0);
+  }
   
   return f->sizecode;
 }
@@ -434,6 +440,7 @@ int nluaV_enproc(lua_State* L, const Proto* f) {
 LUAI_FUNC int nluaV_deproc(lua_State* L, const Proto* f) {
   int i;
   
+#if 0
   /* 计算这个key，可以关联其他保密数据 */
   //unsigned int key = naga_crc32((unsigned char*)&(f->code[0]), (f->sizecode)*sizeof(Instruction));
   unsigned int key = f->rule.ekey;
@@ -445,6 +452,11 @@ LUAI_FUNC int nluaV_deproc(lua_State* L, const Proto* f) {
     /* 使用其他指令的密文hash作为key */
     key = naga_crc32((unsigned char*)&(f->code[i-1]), sizeof(Instruction));
     G(L)->ideins(L,&(f->code[i]), key);
+  }
+#endif
+  
+  for (i=0; i<f->sizecode; i++) {
+    G(L)->ideins(L,&(f->code[i]), 0);
   }
   
   return f->sizecode;
