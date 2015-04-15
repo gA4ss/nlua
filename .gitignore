@@ -49,9 +49,13 @@ xlinker
 *.org
 try make/
 test/
-project/
+project*/
+project*/*
+*.pbxproj
+*.xcuserstate
+.DS_Store
 bak/
-*.0*
+*.0*	
 *.out
 *.bin
 *.bindump
